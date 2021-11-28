@@ -1,0 +1,39 @@
+﻿  all_node.c
+  arrays.c
+  benchmark.c
+  control.c
+  cut_node.c
+  evaluation.c
+  exclude_node.c
+  hash.c
+  input.c
+  low_depth.c
+  main.c
+  make_move.c
+  material_value.c
+  mobility.c
+  move_gen.c
+  next_move.c
+  ok_move.c
+  pawn_eval.c
+  pv_node.c
+  qsearch.c
+  qsearch_pv.c
+  root_analysis.c
+  root_multipv.c
+  root_node.c
+  search.c
+  SEE.c
+  set_position.c
+  SMP.c
+  SMP_search.c
+  PST.c
+  top_analysis.c
+  top_node.c
+  un_make_move.c
+  utility.c
+  Generating code
+  Previous IPDB not found, fall back to full compilation.
+  All 217 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  FireBird 1.1.vcxproj -> C:\FireBird\x64\Release\FireBird 1.1.exe

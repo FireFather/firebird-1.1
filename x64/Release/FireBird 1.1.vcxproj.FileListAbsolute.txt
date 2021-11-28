@@ -1,0 +1,2 @@
+C:\FireBird 1.1\x64\Release\FireBird 1.1.exe
+C:\FireBird\x64\Release\FireBird 1.1.exe
