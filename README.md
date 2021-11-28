@@ -6,3 +6,4 @@ Early incarnation of the legendary program...#1 in the world for a short time in
 ![alt tag](https://raw.githubusercontent.com/FireFather/firebird/master/firebird3.bmp)
 ![alt tag](https://raw.githubusercontent.com/FireFather/firebird/master/firebird4.bmp)
 
+includes Visual Studio 2019 project files
