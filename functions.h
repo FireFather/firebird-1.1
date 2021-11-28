@@ -1,0 +1,118 @@
+
+boolean BlackOK( typePos *, uint32 );
+boolean BlackSEE( typePos *, uint32 );
+boolean SMPSplit( typePos *, typeNext *, int, int, int, int, int * );
+boolean TryInput();
+boolean WhiteOK( typePos *, uint32 );
+boolean WhiteSEE( typePos *, uint32 );
+
+char *Notate( uint32, char * );
+char *ReadFEN( typePos *, char * );
+
+int AllNodeBlack( typePos *, int, int );
+int AllNodeBlackCheck( typePos *, int, int );
+int AllNodeWhite( typePos *, int, int );
+int AllNodeWhiteCheck( typePos *, int, int );
+int BlackAnalysis( typePos *, int, int, int );
+int BlackMultiPV( typePos *, int );
+int CutNodeBlack( typePos *, int, int );
+int CutNodeBlackCheck( typePos *, int, int );
+int CutNodeWhite( typePos *, int, int );
+int CutNodeWhiteCheck( typePos *, int, int );
+int ExcludeBlack( typePos *, int, int, uint32 );
+int ExcludeBlackCheck( typePos *, int, int, uint32 );
+int ExcludeWhite( typePos *, int, int, uint32 );
+int ExcludeWhiteCheck( typePos *, int, int, uint32 );
+int InitHash( int );
+int InitPawnHash( int );
+int LowDepthBlack( typePos *, int, int );
+int LowDepthBlackCheck( typePos *, int, int );
+int LowDepthWhite( typePos *, int, int );
+int LowDepthWhiteCheck( typePos *, int, int );
+int PVNodeBlack( typePos *, int, int, int, int );
+int PVNodeWhite( typePos *, int, int, int, int );
+int PVQsearchBlack( typePos *, int, int, int );
+int PVQsearchBlackCheck( typePos *, int, int, int );
+int PVQsearchWhite( typePos *, int, int, int );
+int PVQsearchWhiteCheck( typePos *, int, int, int );
+int QsearchBlack( typePos *, int, int );
+int QsearchBlackCheck( typePos *, int, int );
+int QsearchWhite( typePos *, int, int );
+int QsearchWhiteCheck( typePos *, int, int );
+int RootBlack( typePos *, int, int, int );
+int RootWhite( typePos *, int, int, int );
+int WhiteAnalysis( typePos *, int, int, int );
+int WhiteMultiPV( typePos *, int );
+
+uint32 NextBlack( typePos *, typeNext * );
+uint32 NextWhite( typePos *, typeNext * );
+uint64 GetClock();
+uint64 ProcessClock();
+
+#ifdef BENCHMARK
+void BenchMark( typePos *, char * );
+#endif
+
+void BlackAllSMP( typePos * );
+void BlackCutSMP( typePos * );
+void BlackPVNodeSMP( typePos * );
+void BlackTopAnalysis( typePos * );
+void CheckDone( typePos *, int );
+void EndSMP();
+void Eval( typePos *, int, int, int );
+void EvalHashClear();
+void GetSysInfo();
+void HaltSearch();
+void HashClear();
+void HashExact( typePos *, int, int, int, int );
+void HashLower( uint64, int, int, int );
+void HashLowerAll( typePos *, int, int, int );
+void HashUpper( uint64, int, int );
+void HashUpperCut( typePos *, int, int );
+void IncrementAge();
+void Info( sint64 );
+void Information( typePos *, sint64, int, int, int );
+void InitArrays();
+void InitBitboards( typePos * );
+void InitCaptureValues();
+void InitCaptureValues();
+void InitMaterialValue();
+void InitPawns();
+void InitPosition( typePos *, char * );
+void InitRandom32( uint64 );
+void InitSearch( typePos *, char * );
+void InitSMP();
+void InitStatic();
+void Input( typePos * );
+void Make( typePos *, uint32 );
+void MakeBlack( typePos *, uint32 );
+void MakeWhite( typePos *, uint32 );
+void Mobility( typePos * );
+void NewGame( typePos *, boolean );
+void OutputBestMove();
+void PawnEval( typePos *, typePawnEval * );
+void PawnHashReset();
+void ponderhit();
+void ResetHistory();
+void ResetPositionalGain();
+void RPInit();
+void Search( typePos * );
+void Send( char *, ... );
+void ShowBanner();
+void SMPFailHigh( SplitPoint *, typePos *, uint32 );
+void SortOrdinary( typeMoveList *, typeMoveList *, uint32, uint32, uint32 );
+void TopBlack( typePos * );
+void TopWhite( typePos * );
+void Undo( typePos *, uint32 );
+void UndoBlack( typePos *, uint32 );
+void UndoWhite( typePos *, uint32 );
+void WhiteAllSMP( typePos * );
+void WhiteCutSMP( typePos * );
+void WhitePVNodeSMP( typePos * );
+void WhiteTopAnalysis( typePos * );
+
+void ThreadHalt( typePos* );
+void ThreadStall( typePos*, int );
+
+void InitRootPosition();
+void InitHashNull();
