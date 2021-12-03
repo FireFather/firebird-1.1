@@ -1,15 +1,15 @@
-#ifndef BUILD_SMP_Search
-#define BUILD_SMP_Search
+#ifndef BUILD_IVAN_SMP_PV
+#define BUILD_IVAN_SMP_PV
 #include "firebird.h"
 
-static INLINE void SMPBadHistory( typePos* Pos, uint32 m, SplitPoint* sp )
+static INLINE void SMP_BAD_HISTORY( typePOS *POS, uint32 m, SPLITPOINT *sp )
     {
-    if ((Pos->Current + 1)->cp == 0 && MoveHistory(m))
+    if( (POS->DYN + 1)->cp == 0 && MoveHistory(m) )
         {
-        int sv = HistoryValue(Pos, m);
+        int sv = HISTORY_VALUE(POS, m);
 
-        if (Pos->Current->Value > sp->alpha - 50)
-            HistoryValue(Pos, m) = sv - ((sv * sp->depth) >> 8);
+        if( POS->DYN->Value > sp->alpha - 50 )
+            HISTORY_VALUE(POS, m) = sv - ((sv * sp->depth) >> 8);
         }
     }
 
@@ -19,276 +19,275 @@ static INLINE void SMPBadHistory( typePos* Pos, uint32 m, SplitPoint* sp )
 #include "black.h"
 #endif
 
-void MyPVNodeSMP( typePos* Position )
+void MyPVNodeSMP( typePOS *POSITION )
     {
     int v;
     int alpha;
     int beta;
     int m;
-    typeNext* NextMove;
-    SplitPoint* sp;
-    int Extend;
+    typeNEXT *NextMove;
+    SPLITPOINT *sp;
+    int EXTEND;
     int to;
     int new_depth;
 
-    sp = Position->SplitPoint;
+    sp = POSITION->SplitPoint;
 
-    while (true)
+    while( true )
         {
-        Lock(sp->splock);
+        LOCK(sp->splock);
         beta = sp->beta;
         alpha = sp->alpha;
 
-        if (sp->tot)
+        if( sp->tot )
             {
-            UnLock(sp->splock);
+            UNLOCK(sp->splock);
             return;
             }
-        NextMove = sp->MovePick;
-        m = MyNext(Position, NextMove);
+        NextMove = sp->MOVE_PICK;
+        m = MyNext(POSITION, NextMove);
 
-        if (!m)
+        if( !m )
             {
-            NextMove->phase = Fase0;
-            UnLock(sp->splock);
+            NextMove->phase = FASE_0;
+            UNLOCK(sp->splock);
             return;
             }
-        UnLock(sp->splock);
-        Make(Position, m);
-        Eval(Position, -0x7fff0000, 0x7fff0000, m);
+        UNLOCK(sp->splock);
+        MAKE(POSITION, m);
+        Eval(POSITION, -0x7fff0000, 0x7fff0000, m);
 
-        if (MyKingCheck)
+        if( MyKingCheck )
             {
-            Undo(Position, m);
+            UNDO(POSITION, m);
             continue;
             }
-        Extend = 0;
-        to = To(m);
+        EXTEND = 0;
+        to = TO(m);
 
-        if (PassedPawnPush(to, SixthRank(to)))
-            Extend = 2;
+        if( PassedPawnPush(to, SIXTH_RANK(to)) )
+            EXTEND = 2;
         else
             {
-            if (Position->Current->cp != 0 || OppKingCheck != 0)
-                Extend = 1;
+            if( POSITION->DYN->cp != 0 || OppKingCheck != 0 )
+                EXTEND = 1;
 
-            else if (PassedPawnPush(to, FourthRank(to)))
-                Extend = 1;
+            else if( PassedPawnPush(to, FOURTH_RANK(to)) )
+                EXTEND = 1;
             }
-        new_depth = sp->depth - 2 + Extend;
+        new_depth = sp->depth - 2 + EXTEND;
 
-        if (OppKingCheck)
-            v = -OppCutCheck(Position, -alpha, new_depth);
+        if( OppKingCheck )
+            v = -OppCutCheck(POSITION, -alpha, new_depth);
         else
-            v = -OppCut(Position, -alpha, new_depth);
+            v = -OppCut(POSITION, -alpha, new_depth);
 
-        if (v <= alpha)
+        if( v <= alpha )
             {
-            Undo(Position, m);
+            UNDO(POSITION, m);
 
-            if (Position->stop)
+            if( POSITION->stop )
                 return;
 
-            SMPBadHistory(Position, m, sp);
+            SMP_BAD_HISTORY(POSITION, m, sp);
             continue;
             }
 
-        if (!sp->tot && !Position->stop)
+        if( !sp->tot && !POSITION->stop )
             {
             boolean b = (OppKingCheck != 0);
-            v = -OppPV(Position, -beta, -alpha, new_depth, b);
-            Undo(Position, m);
+            v = -OppPV(POSITION, -beta, -alpha, new_depth, b);
+            UNDO(POSITION, m);
 
-            if (Position->stop)
+            if( POSITION->stop )
                 return;
 
-            if (v > alpha)
+            if( v > alpha )
                 {
-                Lock(sp->splock);
+                LOCK(sp->splock);
 
-                if (v > sp->alpha)
+                if( v > sp->alpha )
                     {
                     sp->alpha = v;
                     sp->value = v;
                     sp->good_move = m;
                     }
-                UnLock(sp->splock);
-                HashLower(Position->Current->Hash, m, sp->depth, v);
+                UNLOCK(sp->splock);
+                HashLower(POSITION->DYN->HASH, m, sp->depth, v);
                 }
             }
         else
-            Undo(Position, m);
+            UNDO(POSITION, m);
 
-        if (Position->stop)
+        if( POSITION->stop )
             return;
 
-        if (v >= beta)
+        if( v >= beta )
             {
-            SMPFailHigh(sp, Position, m);
+            ivan_fail_high(sp, POSITION, m);
             return;
             }
         }
     }
-
-void MyAllSMP( typePos* Position )
+void MyAllSMP( typePOS *POSITION )
     {
     int v;
     int m;
-    typeNext* NextMove;
-    SplitPoint* sp;
+    typeNEXT *NextMove;
+    SPLITPOINT *sp;
     int scout, depth, ph, c;
-    sp = Position->SplitPoint;
+    sp = POSITION->SplitPoint;
     scout = sp->beta;
     depth = sp->depth;
 
-    while (true)
+    while( true )
         {
-        Lock(sp->splock);
+        LOCK(sp->splock);
 
-        if (sp->tot)
+        if( sp->tot )
             {
-            UnLock(sp->splock);
+            UNLOCK(sp->splock);
             return;
             }
-        NextMove = sp->MovePick;
-        m = MyNext(Position, NextMove) & 0x7fff;
+        NextMove = sp->MOVE_PICK;
+        m = MyNext(POSITION, NextMove) & 0x7fff;
         ph = NextMove->phase;
         c = NextMove->move;
 
-        if (!m)
+        if( !m )
             {
-            NextMove->phase = Fase0;
-            UnLock(sp->splock);
+            NextMove->phase = FASE_0;
+            UNLOCK(sp->splock);
             return;
             }
-        UnLock(sp->splock);
+        UNLOCK(sp->splock);
 
-        if (m == NextMove->exclude)
+        if( m == NextMove->exclude )
             continue;
-        Make(Position, m);
-        Eval(Position, -0x7fff0000, 0x7fff0000, m);
+        MAKE(POSITION, m);
+        Eval(POSITION, -0x7fff0000, 0x7fff0000, m);
 
-        if (MyKingCheck)
+        if( MyKingCheck )
             {
-            Undo(Position, m);
+            UNDO(POSITION, m);
             continue;
             }
         m &= 0x7fff;
 
-        if (OppKingCheck)
+        if( OppKingCheck )
             {
-            v = -OppCutCheck(Position, 1 - scout, depth - 1);
+            v = -OppCutCheck(POSITION, 1 - scout, depth - 1);
             }
         else
             {
-            int to = To(m);
-            int Extend = 0;
+            int to = TO(m);
+            int EXTEND = 0;
 
-            if (PassedPawnPush(to, SixthRank(to)))
-                Extend = 1;
+            if( PassedPawnPush(to, SIXTH_RANK(to)) )
+                EXTEND = 1;
 
-            if (ph == Ordinary_Moves && !Extend)
+            if( ph == ORDINARY_MOVES && !EXTEND )
                 {
-                int Reduction = 2 + MSB(2 + c);
-                int nuovo_abisso = MAX(8, depth - Reduction);
-                v = -OppCut(Position, 1 - scout, nuovo_abisso);
+                int REDUCTION = 2 + MSB(2 + c);
+                int nuovo_abisso = MAX(8, depth - REDUCTION);
+                v = -OppCut(POSITION, 1 - scout, nuovo_abisso);
 
-                if (v < scout)
+                if( v < scout )
                     goto I;
                 }
-            v = -OppCut(Position, 1 - scout, depth - 2 + Extend);
+            v = -OppCut(POSITION, 1 - scout, depth - 2 + EXTEND);
             }
         I:
-        Undo(Position, m);
+        UNDO(POSITION, m);
 
-        if (Position->stop)
+        if( POSITION->stop )
             return;
 
-        if (v >= scout)
+        if( v >= scout )
             {
-            SMPFailHigh(sp, Position, m);
+            ivan_fail_high(sp, POSITION, m);
             return;
             }
-        SMPBadHistory(Position, m, sp);
+        SMP_BAD_HISTORY(POSITION, m, sp);
         }
     }
 
-void MyCutSMP( typePos* Position )
+void MyCutSMP( typePOS *POSITION )
     {
     int v;
     int m;
-    typeNext* NextMove;
-    SplitPoint* sp;
+    typeNEXT *NextMove;
+    SPLITPOINT *sp;
     int scout, depth, ph, c;
-    sp = Position->SplitPoint;
+    sp = POSITION->SplitPoint;
     scout = sp->beta;
     depth = sp->depth;
 
-    while (true)
+    while( true )
         {
-        Lock(sp->splock);
+        LOCK(sp->splock);
 
-        if (sp->tot)
+        if( sp->tot )
             {
-            UnLock(sp->splock);
+            UNLOCK(sp->splock);
             return;
             }
-        NextMove = sp->MovePick;
-        m = MyNext(Position, NextMove);
+        NextMove = sp->MOVE_PICK;
+        m = MyNext(POSITION, NextMove);
         ph = NextMove->phase;
         c = NextMove->move;
 
-        if (!m)
+        if( !m )
             {
-            NextMove->phase = Fase0;
-            UnLock(sp->splock);
+            NextMove->phase = FASE_0;
+            UNLOCK(sp->splock);
             return;
             }
-        UnLock(sp->splock);
-        Make(Position, m);
-        Eval(Position, -0x7fff0000, 0x7fff0000, m);
+        UNLOCK(sp->splock);
+        MAKE(POSITION, m);
+        Eval(POSITION, -0x7fff0000, 0x7fff0000, m);
 
-        if (MyKingCheck)
+        if( MyKingCheck )
             {
-            Undo(Position, m);
+            UNDO(POSITION, m);
             continue;
             }
         m &= 0x7fff;
 
-        if (OppKingCheck)
+        if( OppKingCheck )
             {
-            v = -OppAllCheck(Position, 1 - scout, depth - 1);
+            v = -OppAllCheck(POSITION, 1 - scout, depth - 1);
             }
         else
             {
-            int to = To(m);
-            int Extend = 0;
+            int to = TO(m);
+            int EXTEND = 0;
 
-            if (PassedPawnPush(to, SixthRank(to)))
-                Extend = 1;
+            if( PassedPawnPush(to, SIXTH_RANK(to)) )
+                EXTEND = 1;
 
-            if (ph == Ordinary_Moves && !Extend)
+            if( ph == ORDINARY_MOVES && !EXTEND )
                 {
-                int Reduction = 4 + MSB(5 + c);
-                int nuovo_abisso = MAX(8, depth - Reduction);
-                v = -OppAll(Position, 1 - scout, nuovo_abisso);
+                int REDUCTION = 4 + MSB(5 + c);
+                int nuovo_abisso = MAX(8, depth - REDUCTION);
+                v = -OppAll(POSITION, 1 - scout, nuovo_abisso);
 
-                if (v < scout)
+                if( v < scout )
                     goto I;
                 }
-            v = -OppAll(Position, 1 - scout, depth - 2 + Extend);
+            v = -OppAll(POSITION, 1 - scout, depth - 2 + EXTEND);
             }
         I:
-        Undo(Position, m);
+        UNDO(POSITION, m);
 
-        if (Position->stop)
+        if( POSITION->stop )
             return;
 
-        if (v >= scout)
+        if( v >= scout )
             {
-            SMPFailHigh(sp, Position, m);
+            ivan_fail_high(sp, POSITION, m);
             return;
             }
-        SMPBadHistory(Position, m, sp);
+        SMP_BAD_HISTORY(POSITION, m, sp);
         }
     }

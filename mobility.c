@@ -1,60 +1,60 @@
 
 #include "firebird.h"
 
-void Mobility (typePos* Position)
+void Mobility (typePOS* POSITION)
 {
   uint64 U, A, T, AttB, AttR;
   int b;
-  Position->Current->wXray = 0;
-  Position->Current->bXray = 0;
-  A = AttK[Position->wKsq];
-  Position->Current->wAtt = A;
+  POSITION->DYN->wXray = 0;
+  POSITION->DYN->bXray = 0;
+  A = AttK[POSITION->wKsq];
+  POSITION->DYN->wAtt = A;
   if (A & bBitboardK)
-    Position->Current->bKcheck = SqSet[Position->wKsq];
+    POSITION->DYN->bKcheck = SqSet[POSITION->wKsq];
   else
-    Position->Current->bKcheck = 0;
-  A = AttK[Position->bKsq];
-  Position->Current->bAtt = A;
+    POSITION->DYN->bKcheck = 0;
+  A = AttK[POSITION->bKsq];
+  POSITION->DYN->bAtt = A;
   if (A & wBitboardK)
-    Position->Current->wKcheck = SqSet[Position->bKsq];
+    POSITION->DYN->wKcheck = SqSet[POSITION->bKsq];
   else
-    Position->Current->wKcheck = 0;
+    POSITION->DYN->wKcheck = 0;
   for (U = wBitboardN; U; BitClear (b, U))
     {
       b = LSB (U);
       A = AttN[b];
-      Position->Current->wAtt |= A;
+      POSITION->DYN->wAtt |= A;
       if (A & bBitboardK)
-	Position->Current->bKcheck |= SqSet[b];
+	POSITION->DYN->bKcheck |= SqSet[b];
     }
   for (U = wBitboardB; U; BitClear (b, U))
     {
       b = LSB (U);
       A = AttB (b);
-      Position->Current->wAtt |= A;
+      POSITION->DYN->wAtt |= A;
       if (A & bBitboardK)
-	Position->Current->bKcheck |= SqSet[b];
-      else if (bBitboardK & Diag[b])
+	POSITION->DYN->bKcheck |= SqSet[b];
+      else if (bBitboardK & DIAG[b])
 	{
-	  T = AttB (Position->bKsq) & A;
-	  Position->Current->wXray |= T;
+	  T = AttB (POSITION->bKsq) & A;
+	  POSITION->DYN->wXray |= T;
 	  if (T)
-	    Position->XrayW[LSB (T)] = b;
+	    POSITION->XRAYw[LSB (T)] = b;
 	}
     }
   for (U = wBitboardR; U; BitClear (b, U))
     {
       b = LSB (U);
       A = AttR (b);
-      Position->Current->wAtt |= A;
+      POSITION->DYN->wAtt |= A;
       if (A & bBitboardK)
-	Position->Current->bKcheck |= SqSet[b];
-      else if (bBitboardK & Ortho[b])
+	POSITION->DYN->bKcheck |= SqSet[b];
+      else if (bBitboardK & ORTHO[b])
 	{
-	  T = AttR (Position->bKsq) & A;
-	  Position->Current->wXray |= T;
+	  T = AttR (POSITION->bKsq) & A;
+	  POSITION->DYN->wXray |= T;
 	  if (T)
-	    Position->XrayW[LSB (T)] = b;
+	    POSITION->XRAYw[LSB (T)] = b;
 	}
     }
   for (U = wBitboardQ; U; BitClear (b, U))
@@ -63,60 +63,60 @@ void Mobility (typePos* Position)
       AttR = AttR (b);
       AttB = AttB (b);
       A = AttB | AttR;
-      Position->Current->wAtt |= A;
+      POSITION->DYN->wAtt |= A;
       if (A & bBitboardK)
-	Position->Current->bKcheck |= SqSet[b];
-      else if (bBitboardK & Diag[b])
+	POSITION->DYN->bKcheck |= SqSet[b];
+      else if (bBitboardK & DIAG[b])
 	{
-	  T = AttB (Position->bKsq) & AttB;
-	  Position->Current->wXray |= T;
+	  T = AttB (POSITION->bKsq) & AttB;
+	  POSITION->DYN->wXray |= T;
 	  if (T)
-	    Position->XrayW[LSB (T)] = b;
+	    POSITION->XRAYw[LSB (T)] = b;
 	}
-      else if (bBitboardK & Ortho[b])
+      else if (bBitboardK & ORTHO[b])
 	{
-	  T = AttR (Position->bKsq) & AttR;
-	  Position->Current->wXray |= T;
+	  T = AttR (POSITION->bKsq) & AttR;
+	  POSITION->DYN->wXray |= T;
 	  if (T)
-	    Position->XrayW[LSB (T)] = b;
+	    POSITION->XRAYw[LSB (T)] = b;
 	}
     }
   for (U = bBitboardN; U; BitClear (b, U))
     {
       b = LSB (U);
       A = AttN[b];
-      Position->Current->bAtt |= A;
+      POSITION->DYN->bAtt |= A;
       if (A & wBitboardK)
-	Position->Current->wKcheck |= SqSet[b];
+	POSITION->DYN->wKcheck |= SqSet[b];
     }
   for (U = bBitboardB; U; BitClear (b, U))
     {
       b = LSB (U);
       A = AttB (b);
-      Position->Current->bAtt |= A;
+      POSITION->DYN->bAtt |= A;
       if (A & wBitboardK)
-	Position->Current->wKcheck |= SqSet[b];
-      else if (wBitboardK & Diag[b])
+	POSITION->DYN->wKcheck |= SqSet[b];
+      else if (wBitboardK & DIAG[b])
 	{
-	  T = AttB (Position->wKsq) & A;
-	  Position->Current->bXray |= T;
+	  T = AttB (POSITION->wKsq) & A;
+	  POSITION->DYN->bXray |= T;
 	  if (T)
-	    Position->XrayB[LSB (T)] = b;
+	    POSITION->XRAYb[LSB (T)] = b;
 	}
     }
   for (U = bBitboardR; U; BitClear (b, U))
     {
       b = LSB (U);
       A = AttR (b);
-      Position->Current->bAtt |= A;
+      POSITION->DYN->bAtt |= A;
       if (A & wBitboardK)
-	Position->Current->wKcheck |= SqSet[b];
-      else if (wBitboardK & Ortho[b])
+	POSITION->DYN->wKcheck |= SqSet[b];
+      else if (wBitboardK & ORTHO[b])
 	{
-	  T = AttR (Position->wKsq) & A;
-	  Position->Current->bXray |= T;
+	  T = AttR (POSITION->wKsq) & A;
+	  POSITION->DYN->bXray |= T;
 	  if (T)
-	    Position->XrayB[LSB (T)] = b;
+	    POSITION->XRAYb[LSB (T)] = b;
 	}
     }
   for (U = bBitboardQ; U; BitClear (b, U))
@@ -125,38 +125,38 @@ void Mobility (typePos* Position)
       AttB = AttB (b);
       AttR = AttR (b);
       A = AttB | AttR;
-      Position->Current->bAtt |= A;
+      POSITION->DYN->bAtt |= A;
       if (A & wBitboardK)
-	Position->Current->wKcheck |= SqSet[b];
-      else if (wBitboardK & Diag[b])
+	POSITION->DYN->wKcheck |= SqSet[b];
+      else if (wBitboardK & DIAG[b])
 	{
-	  T = AttB (Position->wKsq) & AttB;
-	  Position->Current->bXray |= T;
+	  T = AttB (POSITION->wKsq) & AttB;
+	  POSITION->DYN->bXray |= T;
 	  if (T)
-	    Position->XrayB[LSB (T)] = b;
+	    POSITION->XRAYb[LSB (T)] = b;
 	}
-      else if (wBitboardK & Ortho[b])
+      else if (wBitboardK & ORTHO[b])
 	{
-	  T = AttR (Position->wKsq) & AttR;
-	  Position->Current->bXray |= T;
+	  T = AttR (POSITION->wKsq) & AttR;
+	  POSITION->DYN->bXray |= T;
 	  if (T)
-	    Position->XrayB[LSB (T)] = b;
+	    POSITION->XRAYb[LSB (T)] = b;
 	}
     }
-  A = (wBitboardP & (~FileA)) << 7;
+  A = (wBitboardP & (~FILEa)) << 7;
   T = A & bBitboardK;
-  Position->Current->bKcheck |= (T >> 7);
-  Position->Current->wAtt |= A;
-  A = (wBitboardP & (~FileH)) << 9;
+  POSITION->DYN->bKcheck |= (T >> 7);
+  POSITION->DYN->wAtt |= A;
+  A = (wBitboardP & (~FILEh)) << 9;
   T = A & bBitboardK;
-  Position->Current->bKcheck |= (T >> 9);
-  Position->Current->wAtt |= A;
-  A = (bBitboardP & (~FileH)) >> 7;
+  POSITION->DYN->bKcheck |= (T >> 9);
+  POSITION->DYN->wAtt |= A;
+  A = (bBitboardP & (~FILEh)) >> 7;
   T = A & wBitboardK;
-  Position->Current->wKcheck |= (T << 7);
-  Position->Current->bAtt |= A;
-  A = (bBitboardP & (~FileA)) >> 9;
+  POSITION->DYN->wKcheck |= (T << 7);
+  POSITION->DYN->bAtt |= A;
+  A = (bBitboardP & (~FILEa)) >> 9;
   T = A & wBitboardK;
-  Position->Current->wKcheck |= (T << 9);
-  Position->Current->bAtt |= A;
+  POSITION->DYN->wKcheck |= (T << 9);
+  POSITION->DYN->bAtt |= A;
 }

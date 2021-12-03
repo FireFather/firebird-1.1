@@ -1,6 +1,7 @@
 #ifndef BUILD_low_depth
 #define BUILD_low_depth
 #include "firebird.h"
+#include "history.h"
 #include "null_move.h"
 #include "low_depth.c"
 #include "white.h"
@@ -8,54 +9,55 @@
 #include "black.h"
 #endif
 
-int MyLowDepth( typePos *Position, int VALUE, int depth )
+int MyLowDepth( typePOS *POSITION, int VALUE, int depth )
     {
     int cnt, Value, best_value, v, k, i, trans_move = 0;
     int move, move_depth = 0, trans_depth, to, fr;
-    typeNext NextMove[1];
-    typePosition *TempPosition = Position->Current;
-    typeHash *rank;
+    typeNEXT NextMove[1];
+    typeDYNAMIC *POS0 = POSITION->DYN;
+    typeHash *trans;
+    DECLARE();
 
-    if( VALUE < -ValueMate + 1 )
-        return (-ValueMate + 1);
+    if( VALUE < -VALUE_MATE + 1 )
+        return (-VALUE_MATE + 1);
 
-    if( VALUE > ValueMate - 1 )
-        return (ValueMate - 1);
-    (TempPosition + 1)->move = 0;
-    v = TempPosition->Value + 1125;
+    if( VALUE > VALUE_MATE - 1 )
+        return (VALUE_MATE - 1);
+    (POS0 + 1)->move = 0;
+    v = POS0->Value + 1125;
 
     if( v < VALUE )
         return (VALUE - 1);
     CheckRepetition;
-    k = Position->Current->Hash & HashMask;
+    k = POSITION->DYN->HASH & HashMask;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( (rank->hash ^ (Position->Current->Hash >> 32)) == 0 )
+        if( (trans->hash ^ (POSITION->DYN->HASH >> 32)) == 0 )
             {
-            if( rank->DepthLower >= depth )
+            if( trans->DepthLower >= depth )
                 {
-                Value = HashLowerBound(rank);
+                Value = HashLowerBound(trans);
 
                 if( Value >= VALUE )
                     {
-                    (TempPosition + 1)->move = rank->move;
+                    (POS0 + 1)->move = trans->move;
                     return (Value);
                     }
                 }
 
-            if( rank->DepthUpper >= depth )
+            if( trans->DepthUpper >= depth )
                 {
-                Value = HashUpperBound(rank);
+                Value = HashUpperBound(trans);
 
                 if( Value < VALUE )
                     return (Value);
                 }
 
-            trans_depth = rank->DepthLower;
-            move = rank->move;
+            trans_depth = trans->DepthLower;
+            move = trans->move;
 
             if( move && trans_depth > move_depth )
                 {
@@ -64,60 +66,60 @@ int MyLowDepth( typePos *Position, int VALUE, int depth )
                 }
             }
         }
-    v = TempPosition->Value - (70 + 10 * depth);
+    v = POS0->Value - (70 + 10 * depth);
 
     if( v >= VALUE )
-        return (TempPosition->Value);
-    best_value = MIN(TempPosition->Value, VALUE - 1);
+        return (POS0->Value);
+    best_value = MIN(POS0->Value, VALUE - 1);
 
-    if( TempPosition->Value >= VALUE && MyNull )
+    if( POS0->Value >= VALUE && MyNull )
         {
         v = VALUE;
 
         if( v >= VALUE )
             {
-            MakeNull(Position);
-            v = -OppQsearch(Position, 1 - VALUE, 0);
-            UndoNull(Position);
-            CheckHalt();
+            MakeNull(POSITION);
+            v = -OppQsearch(POSITION, 1 - VALUE, 0);
+            UndoNull(POSITION);
+            CHECK_HALT();
             }
 
-        if( NullMoveVerification && v >= VALUE )
+        if( NULL_MOVE_VERIFICATION && v >= VALUE )
             {
-            int Flags = Position->Current->flags;
-            Position->Current->flags &= ~3;
-            v = MyQsearch(Position, VALUE, 0);
-            Position->Current->flags = Flags;
-            CheckHalt();
+            int FLAGS = POSITION->DYN->flags;
+            POSITION->DYN->flags &= ~3;
+            v = MyQsearch(POSITION, VALUE, 0);
+            POSITION->DYN->flags = FLAGS;
+            CHECK_HALT();
             }
 
         if( v >= VALUE )
             {
             if( trans_move == 0 )
-                HashLower(Position->Current->Hash, 0, depth, v);
+                HashLower(POSITION->DYN->HASH, 0, depth, v);
             return (v);
             }
         }
-    NextMove->phase = Trans;
+    NextMove->phase = TRANS;
     NextMove->TARGET = OppOccupied;
 
-    if( TempPosition->Value + 50 + 8 * depth < VALUE )
+    if( POS0->Value + 50 + 8 * depth < VALUE )
         {
-        NextMove->phase = Trans2;
+        NextMove->phase = TRANS2;
 
-        if( VALUE >= TempPosition->Value + 75 + 32 * depth )
+        if( VALUE >= POS0->Value + 75 + 32 * depth )
             {
             NextMove->TARGET ^= BitboardOppP;
 
             if( BitboardOppP & MyAttacked )
                 best_value += 125;
 
-            if( depth <= 3 && VALUE >= TempPosition->Value + 400 + 32 * depth )
+            if( depth <= 3 && VALUE >= POS0->Value + 400 + 32 * depth )
                 {
                 NextMove->TARGET ^= (BitboardOppN | BitboardOppB);
                 best_value += 300;
 
-                if( VALUE >= TempPosition->Value + 600 + 32 * depth )
+                if( VALUE >= POS0->Value + 600 + 32 * depth )
                     {
                     NextMove->TARGET ^= BitboardOppR;
                     best_value += 200;
@@ -125,20 +127,20 @@ int MyLowDepth( typePos *Position, int VALUE, int depth )
                 }
             }
         }
-    else if( depth <= 3 && TempPosition->Value + 4 * depth < VALUE )
+    else if( depth <= 3 && POS0->Value + 4 * depth < VALUE )
         {
-        NextMove->phase = Trans3;
-        NextMove->mask = (VALUE - TempPosition->Value) + 4 * depth + 5;
+        NextMove->phase = TRANS3;
+        NextMove->mask = (VALUE - POS0->Value) + 4 * depth + 5;
         }
     NextMove->bc = 0;
     NextMove->move = 0;
     NextMove->trans_move = trans_move;
     cnt = 0;
 
-    while( (move = MyNext(Position, NextMove)) )
+    while( (move = MyNext(POSITION, NextMove)) )
         {
-        to = To(move);
-        fr = From(move);
+        to = TO(move);
+        fr = FROM(move);
 
         if( IsRepetition(0) )
             {
@@ -147,10 +149,10 @@ int MyLowDepth( typePos *Position, int VALUE, int depth )
             continue;
             }
 
-        if( cnt >= depth && NextMove->phase == Ordinary_Moves && (move & 0xe000) == 0 && SqSet[fr] & ~MyXray
+        if( cnt >= depth && NextMove->phase == ORDINARY_MOVES && (move & 0xe000) == 0 && SqSet[fr] & ~MyXRAY
             && MyOccupied ^ (BitboardMyP | BitboardMyK) )
             {
-            if( (2 * depth) + MaxPositional (move) + TempPosition->Value <
+            if( (2 * depth) + MAX_POSITIONAL (move) + POS0->Value <
             VALUE + 40 + 2 * cnt )
                 {
                 cnt++;
@@ -158,110 +160,111 @@ int MyLowDepth( typePos *Position, int VALUE, int depth )
                 }
             }
 
-        if( (Position->sq[to] == 0 || (depth <= 5 && !EasySEE(move))) && SqSet[fr] & ~MyXray
-            && Position->sq[fr] != EnumMyK && !MoveIsEP(move) && move != trans_move && !MySEE(Position, move) )
+        if( (POSITION->sq[to] == 0 || (depth <= 5 && !EasySEE(move))) && SqSet[fr] & ~MyXRAY
+            && POSITION->sq[fr] != EnumMyK && !MoveIsEP(move) && move != trans_move && !MySEE(POSITION, move) )
             {
             cnt++;
             continue;
             }
 
         move &= 0x7fff;
-        Make(Position, move);
+        MAKE(POSITION, move);
         EvalLazy(VALUE, VALUE, LazyValue, move);
 
-        if( IllegalMove || (NextMove->phase == PositionalGainPhase && MoveIsCheck) )
+        if( ILLEGAL_MOVE || (NextMove->phase == POSITIONAL_GAIN_PHASE && MOVE_IS_CHECK) )
             {
-            Undo(Position, move);
+            UNDO(POSITION, move);
             continue;
             }
 
-        if( PosIsExact(Position->Current->exact) )
-            v = -Position->Current->Value;
+        if( IS_EXACT(POSITION->DYN->exact) )
+            v = -POSITION->DYN->Value;
 
-        else if( MoveIsCheck )
-            v = -OppLowDepthCheck(Position, 1 - VALUE, depth - 1);
+        else if( MOVE_IS_CHECK )
+            v = -OppLowDepthCheck(POSITION, 1 - VALUE, depth - 1);
 
         else
             {
-            if( cnt >= depth && (2 * depth) - Pos1->Value < VALUE + cnt )
+            if( cnt >= depth && (2 * depth) - POS1->Value < VALUE + cnt )
                 {
-                Undo(Position, move);
+                UNDO(POSITION, move);
                 cnt++;
                 continue;
                 }
 
             if( depth <= 3 )
-                v = -OppQsearch(Position, 1 - VALUE, 0);
+                v = -OppQsearch(POSITION, 1 - VALUE, 0);
             else
-                v = -OppLowDepth(Position, 1 - VALUE, depth - 2);
+                v = -OppLowDepth(POSITION, 1 - VALUE, depth - 2);
             }
         cnt++;
-        Undo(Position, move);
-        CheckHalt();
+        UNDO(POSITION, move);
+        CHECK_HALT();
 
         if( v >= VALUE )
             {
-            if( (TempPosition + 1)->cp == 0 && MoveHistory(move) )
-                HistoryGood(move, depth);
-            HashLower(Position->Current->Hash, move, depth, v);
+            if( (POS0 + 1)->cp == 0 && MoveHistory(move) )
+                HISTORY_GOOD(move, depth);
+            HashLower(POSITION->DYN->HASH, move, depth, v);
             return (v);
             }
 
         if( v >= best_value )
             best_value = v;
 
-        if( (TempPosition + 1)->cp == 0 && MoveHistory(move) )
-            HistoryBad(move, depth);
+        if( (POS0 + 1)->cp == 0 && MoveHistory(move) )
+            HISTORY_BAD(move, depth);
         }
 
-    if( !cnt && NextMove->phase <= Trans2 )
+    if( !cnt && NextMove->phase <= TRANS2 )
         return (0);
-    HashUpper(Position->Current->Hash, depth, best_value);
+    HashUpper(POSITION->DYN->HASH, depth, best_value);
     return (best_value);
     }
 
-int MyLowDepthCheck( typePos *Position, int VALUE, int depth )
+int MyLowDepthCheck( typePOS *POSITION, int VALUE, int depth )
     {
     int ignored, k, trans_move = 0, trans_depth, move_depth = 0;
     int Value, i, move, best_value, v, new_depth;
-    boolean Gen;
-    typeHash *rank;
-    typeMoveList List[512], *list, *p, *q;
-    typePosition *TempPosition = Position->Current;
-  
-    if( VALUE < -ValueMate + 1 )
-        return (-ValueMate + 1);
+    boolean GEN;
+    typeHash *trans;
+    typeMoveList LIST[512], *list, *p, *q;
+    typeDYNAMIC *POS0 = POSITION->DYN;
+    DECLARE();
 
-    if( VALUE > ValueMate - 1 )
-        return (ValueMate - 1);
+    if( VALUE < -VALUE_MATE + 1 )
+        return (-VALUE_MATE + 1);
+
+    if( VALUE > VALUE_MATE - 1 )
+        return (VALUE_MATE - 1);
 
     CheckRepetition;
-    k = Position->Current->Hash & HashMask;
+    k = POSITION->DYN->HASH & HashMask;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( (rank->hash ^ (Position->Current->Hash >> 32)) == 0 )
+        if( (trans->hash ^ (POSITION->DYN->HASH >> 32)) == 0 )
             {
-            if( rank->DepthLower && rank->DepthLower >= depth )
+            if( trans->DepthLower && trans->DepthLower >= depth )
                 {
-                Value = HashLowerBound(rank);
+                Value = HashLowerBound(trans);
 
                 if( Value >= VALUE )
                     return (Value);
                 }
 
-            if( rank->DepthUpper && rank->DepthUpper >= depth )
+            if( trans->DepthUpper && trans->DepthUpper >= depth )
                 {
-                Value = HashUpperBound(rank);
+                Value = HashUpperBound(trans);
 
                 if( Value < VALUE )
                     return (Value);
                 }
 
-            trans_depth = rank->DepthLower;
-            move = rank->move;
+            trans_depth = trans->DepthLower;
+            move = trans->move;
 
             if( move && trans_depth > move_depth )
                 {
@@ -271,37 +274,37 @@ int MyLowDepthCheck( typePos *Position, int VALUE, int depth )
             }
         }
 
-    if( trans_move && !MyOK(Position, trans_move) )
+    if( trans_move && !MyOK(POSITION, trans_move) )
         trans_move = 0;
 
-    best_value = Height(Position) - ValueMate;
-    p = List;
-    List[0].move = trans_move;
-    Gen = false;
-    List[1].move = 0;
+    best_value = HEIGHT(POSITION) - VALUE_MATE;
+    p = LIST;
+    LIST[0].move = trans_move;
+    GEN = false;
+    LIST[1].move = 0;
     ignored = 0;
 
-    while( p->move || !Gen )
+    while( p->move || !GEN )
         {
         if( !p->move )
             {
-            list = MyEvasion(Position, List + 1, 0xffffffffffffffff);
-            Gen = true;
+            list = MyEvasion(POSITION, LIST + 1, 0xffffffffffffffff);
+            GEN = true;
 
-            for ( p = list - 1; p >= List + 1; p-- )
+            for ( p = list - 1; p >= LIST + 1; p-- )
                 {
                 if( (p->move & 0x7fff) == trans_move )
                     p->move = 0;
                 else if( p->move <= (0x80 << 24) )
                     {
-                    if( (p->move & 0x7fff) == TempPosition->killer1 )
+                    if( (p->move & 0x7fff) == POS0->killer1 )
                         p->move |= 0x7fff8000;
 
-                    else if( (p->move & 0x7fff) == TempPosition->killer2 )
+                    else if( (p->move & 0x7fff) == POS0->killer2 )
                         p->move |= 0x7fff0000;
 
                     else
-                        p->move |= (p->move & 0xffff) | ((HistoryValue(Position, p->move) >> 1) << 16);
+                        p->move |= (p->move & 0xffff) | ((HISTORY_VALUE(POSITION, p->move) >> 1) << 16);
                     }
                 move = p->move;
 
@@ -315,7 +318,7 @@ int MyLowDepthCheck( typePos *Position, int VALUE, int depth )
                 q--;
                 q->move = move;
                 }
-            p = List + 1;
+            p = LIST + 1;
             continue;
             }
         move = p->move;
@@ -327,38 +330,38 @@ int MyLowDepthCheck( typePos *Position, int VALUE, int depth )
             continue;
             }
 
-        if( IsInterpose(move) && VALUE > -25000 && (move & 0x7fff) != trans_move && !MySEE(Position, move) )
+        if( IsInterpose(move) && VALUE > -25000 && (move & 0x7fff) != trans_move && !MySEE(POSITION, move) )
             {
             ignored++;
             continue;
             }
         move &= 0x7fff;
-        Make(Position, move);
+        MAKE(POSITION, move);
         EvalLazy(VALUE, VALUE, LazyValue, move);
 
-        if( IllegalMove )
+        if( ILLEGAL_MOVE )
             {
-            Undo(Position, move);
+            UNDO(POSITION, move);
             continue;
             }
 
-        if( PosIsExact(Position->Current->exact) )
-            v = -Position->Current->Value;
+        if( IS_EXACT(POSITION->DYN->exact) )
+            v = -POSITION->DYN->Value;
 
-        else if( MoveIsCheck )
-            v = -OppLowDepthCheck(Position, 1 - VALUE, depth - 1 + (EarlyGame));
+        else if( MOVE_IS_CHECK )
+            v = -OppLowDepthCheck(POSITION, 1 - VALUE, depth - 1 + (EARLY_GAME));
 
         else
             {
-            new_depth = depth - 2 + EarlyGame;
+            new_depth = depth - 2 + EARLY_GAME;
 
-            if( QSearchCondition )
-                v = -OppQsearch(Position, 1 - VALUE, 0);
+            if( QSEARCH_CONDITION )
+                v = -OppQsearch(POSITION, 1 - VALUE, 0);
             else
-                v = -OppLowDepth(Position, 1 - VALUE, new_depth);
+                v = -OppLowDepth(POSITION, 1 - VALUE, new_depth);
             }
-        Undo(Position, move);
-        CheckHalt();
+        UNDO(POSITION, move);
+        CHECK_HALT();
 
         if( v <= best_value )
             continue;
@@ -366,13 +369,13 @@ int MyLowDepthCheck( typePos *Position, int VALUE, int depth )
 
         if( v >= VALUE )
             {
-            HashLower(Position->Current->Hash, move, MAX(1, depth), v);
+            HashLower(POSITION->DYN->HASH, move, MAX(1, depth), v);
             return (v);
             }
         }
 
     if( ignored && best_value < -25000 )
         best_value = VALUE - 1;
-    HashUpper(Position->Current->Hash, MAX(1, depth), best_value);
+    HashUpper(POSITION->DYN->HASH, MAX(1, depth), best_value);
     return (best_value);
     }

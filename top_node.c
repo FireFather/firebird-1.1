@@ -1,14 +1,14 @@
 #ifndef BUILD_top_node
 #define BUILD_top_node
 #include "firebird.h"
-
+#include "control.h"
 #define IsCheck   \
- (Position->wtm ? \
-   (wBitboardK & Position->Current->bAtt) : (bBitboardK & Position->Current->wAtt))
-typeRootMoveList RootMoveList[512];
+ (POSITION->wtm ? \
+   (wBitboardK & POSITION->DYN->bAtt) : (bBitboardK & POSITION->DYN->wAtt))
 
+typeRootMoveList ROOT_MOVE_LIST[512];
 #ifndef MINIMAL
-#define AlwaysAnalyze() (AnalysisMode)
+#define AlwaysAnalyze() (ANALYSIS_MODE)
 #else
 #define AlwaysAnalyze() (false)
 #endif
@@ -19,122 +19,124 @@ typeRootMoveList RootMoveList[512];
 #include "black.h"
 #endif
 
-void MyTop( typePos *Position )
+void MyTop( typePOS *POSITION )
     {
     int i, k, depth, A, L, U, v, Value = 0, trans_depth;
     int move_depth = 0, EXACT_DEPTH = 0;
-    uint32 move, Hash_MOVE = 0, EXACT_MOVE = 0, to, fr;
+    uint32 move, HASH_MOVE = 0, EXACT_MOVE = 0, to, fr;
     typeMoveList *mlx, *ml, ML[512];
     typeRootMoveList *p, *q, *list;
-    typeHash *rank;
-    typePosition *TempPosition = Position->Current;
+    typeHash *trans;
+    typeDYNAMIC *POS0 = POSITION->DYN;
     int PieceValue[16] =
         {
         0, 1, 3, 0, 3, 3, 5, 9, 0, 1, 3, 0, 3, 3, 5, 9
         };
 
-    if( Analysing || AnalysisMode )
+    DECLARE();
+
+    if( ANALYSING || ANALYSIS_MODE )
         {
-        MyTopAnalysis(Position);
+        MyTopAnalysis(POSITION);
         return;
         }
 
     EVAL(0);
 
     if( IsCheck )
-        ml = MyEvasion(Position, ML, 0xffffffffffffffff);
+        ml = MyEvasion(POSITION, ML, 0xffffffffffffffff);
     else
         {
-        mlx = MyCapture(Position, ML, OppOccupied);
-        ml = MyOrdinary(Position, mlx);
+        mlx = MyCapture(POSITION, ML, OppOccupied);
+        ml = MyOrdinary(POSITION, mlx);
         SortOrdinary(ml, mlx, 0, 0, 0);
         }
 
-    k = Position->Current->Hash & HashMask;
+    k = POSITION->DYN->HASH & HashMask;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( (rank->hash ^ (Position->Current->Hash >> 32)) == 0 )
+        if( (trans->hash ^ (POSITION->DYN->HASH >> 32)) == 0 )
             {
-            trans_depth = rank->DepthLower;
-            move = rank->move;
+            trans_depth = trans->DepthLower;
+            move = trans->move;
 
-            if( IsExact(rank) )
+            if( IsExact(trans) )
                 {
                 EXACT_DEPTH = trans_depth;
                 EXACT_MOVE = move;
-                Value = HashUpperBound(rank);
+                Value = HashUpperBound(trans);
                 }
 
             if( move && trans_depth > move_depth )
                 {
                 move_depth = trans_depth;
-                Hash_MOVE = move;
+                HASH_MOVE = move;
                 }
             }
         }
 
-    if( EXACT_DEPTH >= PreviousDepth - 6 && EXACT_MOVE == Hash_MOVE && !DoPonder && EXACT_MOVE && PreviousFast
-        && PreviousDepth >= 18 && MyOK(Position, EXACT_MOVE) && Value < 25000 && Value > -25000 && !DoPonder && (MultiPV == 1))
+    if( EXACT_DEPTH >= PREVIOUS_DEPTH - 6 && EXACT_MOVE == HASH_MOVE && !DO_PONDER && EXACT_MOVE && PREVIOUS_FAST
+        && PREVIOUS_DEPTH >= 18 && MyOK(POSITION, EXACT_MOVE) && Value < 25000 && Value > -25000 && !DO_PONDER && (MULTI_PV == 1))
         {
-        RootScore = Value;
-        RootBestMove = EXACT_MOVE;
-        RootDepth = EXACT_DEPTH;
-        PreviousFast = false;
+        ROOT_SCORE = Value;
+        ROOT_BEST_MOVE = EXACT_MOVE;
+        ROOT_DEPTH = EXACT_DEPTH;
+        PREVIOUS_FAST = false;
 
         if( !IsCheck )
-            v = MyExclude(Position, Value - 50, PreviousDepth - 6, EXACT_MOVE);
+            v = MyExclude(POSITION, Value - 50, PREVIOUS_DEPTH - 6, EXACT_MOVE);
         else
-            v = MyExcludeCheck(Position, Value - 50, PreviousDepth - 6, EXACT_MOVE);
+            v = MyExcludeCheck(POSITION, Value - 50, PREVIOUS_DEPTH - 6, EXACT_MOVE);
 
         if( v < Value - 50 )
             return;
         }
 
-    PreviousFast = true;
+    PREVIOUS_FAST = true;
 
     for ( i = 0; i < ml - ML; i++ )
-        RootMoveList[i].move = ML[i].move;
-    RootMoveList[ml - ML].move = MoveNone;
-    list = RootMoveList + (ml - ML);
+        ROOT_MOVE_LIST[i].move = ML[i].move;
+    ROOT_MOVE_LIST[ml - ML].move = MOVE_NONE;
+    list = ROOT_MOVE_LIST + (ml - ML);
 
-    q = RootMoveList;
+    q = ROOT_MOVE_LIST;
 
-    for ( p = RootMoveList; p < list; p++ )
+    for ( p = ROOT_MOVE_LIST; p < list; p++ )
         {
         move = p->move & 0x7fff;
-        Make(Position, move);
+        MAKE(POSITION, move);
         EVAL(0);
 
-        if( IllegalMove )
+        if( ILLEGAL_MOVE )
             {
-            Undo(Position, move);
+            UNDO(POSITION, move);
             continue;
             }
         else
             (q++)->move = move & 0x7fff;
-        Undo(Position, move);
+        UNDO(POSITION, move);
         }
     q->move = 0;
     list = q;
 
-    for ( p = RootMoveList; p < list; p++ )
+    for ( p = ROOT_MOVE_LIST; p < list; p++ )
         {
-        if( Position->sq[To(p->move)] )
+        if( POSITION->sq[TO(p->move)] )
             {
-            to = Position->sq[To(p->move)];
-            fr = Position->sq[From(p->move)];
+            to = POSITION->sq[TO(p->move)];
+            fr = POSITION->sq[FROM(p->move)];
             p->move |= 0xff000000 + ((16 * PieceValue[to] - PieceValue[fr]) << 16);
             }
         }
 
-    for ( p = RootMoveList; p < list; p++ )
-        if( p->move == Hash_MOVE )
+    for ( p = ROOT_MOVE_LIST; p < list; p++ )
+        if( p->move == HASH_MOVE )
             p->move |= 0xffff0000;
 
-    for ( p = list - 1; p >= RootMoveList; p-- )
+    for ( p = list - 1; p >= ROOT_MOVE_LIST; p-- )
         {
         move = p->move;
 
@@ -149,42 +151,42 @@ void MyTop( typePos *Position )
         q->move = move;
         }
 
-    L = -ValueMate;
-    U = ValueMate;
+    L = -VALUE_MATE;
+    U = VALUE_MATE;
 
-    if( !RootMoveList[0].move )
+    if( !ROOT_MOVE_LIST[0].move )
         {
         if( IsCheck )
             {
-            RootScore = L;
+            ROOT_SCORE = L;
             }
         else
             {
-            RootScore = 0;
+            ROOT_SCORE = 0;
             }
-        RootBestMove = 0;
-        RootDepth = 0;
+        ROOT_BEST_MOVE = 0;
+        ROOT_DEPTH = 0;
         return;
         }
 
     for ( depth = 2; depth <= 250; depth += 2 )
         {
-        BadMove = false;
-        BattleMove = false;
+        BAD_MOVE = false;
+        BATTLE_MOVE = false;
 
-        if( depth >= 14 && RootScore <= 25000 && -25000 <= RootScore )
+        if( depth >= 14 && ROOT_SCORE <= 25000 && -25000 <= ROOT_SCORE )
             {
             A = 8;
-            L = RootScore - A;
-            U = RootScore + A;
+            L = ROOT_SCORE - A;
+            U = ROOT_SCORE + A;
 
             if( L < -25000 )
-                L = -ValueMate;
+                L = -VALUE_MATE;
 
             if( U > 25000 )
-                U = ValueMate;
+                U = VALUE_MATE;
             AGAIN:
-            v = MyRootNode(Position, L, U, depth);
+            v = MyRootNode(POSITION, L, U, depth);
 
             if( v > L && v < U )
                 goto CHECK_DONE;
@@ -193,26 +195,26 @@ void MyTop( typePos *Position )
                 {
                 L -= A;
                 A += A / 2;
-                RootScore = L;
+                ROOT_SCORE = L;
                 goto AGAIN;
                 }
             else
                 {
                 U += A;
                 A += A / 2;
-                RootScore = U;
+                ROOT_SCORE = U;
                 goto AGAIN;
                 }
             }
         else
-            v = MyRootNode(Position, -ValueMate, ValueMate, depth);
+            v = MyRootNode(POSITION, -VALUE_MATE, VALUE_MATE, depth);
         CHECK_DONE:
         if( depth == 2 )
             {
-            if( !RootMoveList[1].move || (RootMoveList[0].move - RootMoveList[1].move >= (200 << 16)) )
-                EasyMove = true;
+            if( !ROOT_MOVE_LIST[1].move || (ROOT_MOVE_LIST[0].move - ROOT_MOVE_LIST[1].move >= (200 << 16)) )
+                EASY_MOVE = true;
             }
-        RootPrevious = RootScore;
-        CheckDone(Position, depth / 2);
+        ROOT_PREVIOUS = ROOT_SCORE;
+        CheckDone(POSITION, depth / 2);
         }
     }

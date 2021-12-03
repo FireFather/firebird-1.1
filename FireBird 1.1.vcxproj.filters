@@ -96,6 +96,9 @@
     <ClCompile Include="SMP_search.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="static.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="top_analysis.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -114,24 +117,51 @@
     <ClCompile Include="root_analysis.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PST.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="arrays.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="bits.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="black.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="control.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="evaluation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="firebird.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="history.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="init_gen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="make_unmake.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="material_value.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="null_move.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="pawn_eval.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tables.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="undef.h">
@@ -144,45 +174,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="win64bits.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pragma.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="vars.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="arrays.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="constants.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="defines.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="enums.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="functions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="macros.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="movelists.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="structs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="typedefs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="kpk.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rand.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

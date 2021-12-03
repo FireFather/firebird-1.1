@@ -2,9 +2,9 @@ static __inline int LSB( UINT64 x )
     {
     _asm
         {
-        bsf eax, dword Ptr x[0]
+        bsf eax, dword ptr x[0]
 		jnz f_end
-		bsf eax, dword Ptr x[4]
+		bsf eax, dword ptr x[4]
 		jz f_end
 		add eax, 20h
 	f_end:
@@ -14,11 +14,11 @@ static __inline int MSB( UINT64 x )
     {
     _asm
         {
-        bsr	eax, dword Ptr x[4]
+        bsr	eax, dword ptr x[4]
 		jz	l_lo
 		add eax, 20h
 		jmp	l_end
-	l_lo: bsr eax, dword Ptr x[0]
+	l_lo: bsr eax, dword ptr x[0]
 	l_end:
         }
     }
@@ -37,3 +37,5 @@ static __inline int POPCNT( UINT64 v )
     return ((v1 * 0x01010101) >> 24) + ((v2 * 0x01010101) >> 24);
     }
 
+#define BitClear(b, B) B &= (B - 1)
+#define BitSet(b, B) B |= ((uint64) 1) << (b)

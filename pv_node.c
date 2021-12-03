@@ -1,35 +1,38 @@
 #ifndef BUILD_pv_node
 #define BUILD_pv_node
 #include "firebird.h"
+#include "history.h"
+#include "control.h"
 #include "pv_node.c"
 #include "white.h"
 #else
 #include "black.h"
 #endif
 
-int MyPV( typePos *Position, int Alpha, int Beta, int depth, int check )
+int MyPV( typePOS *POSITION, int ALPHA, int BETA, int depth, int check )
     {
-    typeNext NextMove[1];
-    typeHash *rank;
+    typeNEXT NextMove[1];
+    typeHash *trans;
     int good_move, v, Value, k, i, trans_depth, move, move_depth = 0, trans_move = 0, hash_depth;
-    int Singular;
-    boolean Split;
+    int SINGULAR;
+    boolean SPLIT;
     typeMoveList *list, *p, *q;
-    int Extend, best_value, new_depth, move_is_check, to, fr;
-    typePosition *TempPosition = Position->Current;
+    int EXTEND, best_value, new_depth, move_is_check, to, fr;
+    typeDYNAMIC *POS0 = POSITION->DYN;
+    DECLARE();
 
-    if( Beta < -ValueMate )
-        return (-ValueMate);
+    if( BETA < -VALUE_MATE )
+        return (-VALUE_MATE);
 
-    if( Alpha > ValueMate )
-        return (ValueMate);
+    if( ALPHA > VALUE_MATE )
+        return (VALUE_MATE);
 
     if( depth <= 1 )
         {
         if( check )
-            return MyPVQsearchCheck(Position, Alpha, Beta, 1);
+            return MyPVQsearchCheck(POSITION, ALPHA, BETA, 1);
         else
-            return MyPVQsearch(Position, Alpha, Beta, 1);
+            return MyPVQsearch(POSITION, ALPHA, BETA, 1);
         }
     CheckRepetition;
     NextMove->trans_move = 0;
@@ -37,43 +40,43 @@ int MyPV( typePos *Position, int Alpha, int Beta, int depth, int check )
     NextMove->move = 0;
     NextMove->bc = 0;
 
-    k = Position->Current->Hash & HashMask;
-    (TempPosition + 1)->move = 0;
+    k = POSITION->DYN->HASH & HashMask;
+    (POS0 + 1)->move = 0;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( (rank->hash ^ (Position->Current->Hash >> 32)) == 0 )
+        if( (trans->hash ^ (POSITION->DYN->HASH >> 32)) == 0 )
             {
-            trans_depth = rank->DepthLower;
-            move = rank->move;
+            trans_depth = trans->DepthLower;
+            move = trans->move;
 
             if( move && trans_depth > move_depth )
                 {
                 move_depth = trans_depth;
-                (TempPosition + 1)->move = trans_move = move;
+                (POS0 + 1)->move = trans_move = move;
                 }
 
-            if( rank->DepthLower > rank->DepthUpper )
+            if( trans->DepthLower > trans->DepthUpper )
                 {
-                trans_depth = rank->DepthLower;
-                Value = HashLowerBound(rank);
+                trans_depth = trans->DepthLower;
+                Value = HashLowerBound(trans);
                 }
             else
                 {
-                trans_depth = rank->DepthUpper;
-                Value = HashUpperBound(rank);
+                trans_depth = trans->DepthUpper;
+                Value = HashUpperBound(trans);
                 }
 
             if( trans_depth > hash_depth )
                 hash_depth = trans_depth;
 
-            if( IsExact(rank) && trans_depth >= depth )
+            if( IsExact(trans) && trans_depth >= depth )
                 {
-                UpdateAge();
+                UPDATE_AGE();
 
-                if( !Analysing )
+                if( !ANALYSING )
                     return (Value);
                 }
             }
@@ -81,68 +84,68 @@ int MyPV( typePos *Position, int Alpha, int Beta, int depth, int check )
 
     if( !trans_move && depth >= 6 )
         {
-        v = Alpha;
+        v = ALPHA;
 
         if( depth >= 10 )
             {
-            v = MyPV(Position, Alpha - depth, Beta + depth, depth - 8, check);
-            CheckHalt();
+            v = MyPV(POSITION, ALPHA - depth, BETA + depth, depth - 8, check);
+            CHECK_HALT();
 
-            if( v > Alpha - depth )
-                trans_move = (TempPosition + 1)->move;
+            if( v > ALPHA - depth )
+                trans_move = (POS0 + 1)->move;
             }
 
-        if( v > Alpha - depth )
-            v = MyPV(Position, Alpha - depth, Beta + depth, depth - 4, check);
-        CheckHalt();
+        if( v > ALPHA - depth )
+            v = MyPV(POSITION, ALPHA - depth, BETA + depth, depth - 4, check);
+        CHECK_HALT();
 
-        if( v > Alpha - depth )
-            trans_move = (TempPosition + 1)->move;
+        if( v > ALPHA - depth )
+            trans_move = (POS0 + 1)->move;
         }
     else if( depth >= 10 && depth > hash_depth + 8 )
         {
-        v = MyPV(Position, Alpha - depth, Beta + depth, depth - 8, check);
-        CheckHalt();
+        v = MyPV(POSITION, ALPHA - depth, BETA + depth, depth - 8, check);
+        CHECK_HALT();
 
-        if( v > Alpha - depth )
-            trans_move = (TempPosition + 1)->move;
+        if( v > ALPHA - depth )
+            trans_move = (POS0 + 1)->move;
 
-        if( v > Alpha - depth )
+        if( v > ALPHA - depth )
             {
-            v = MyPV(Position, Alpha - depth, Beta + depth, depth - 4, check);
-            CheckHalt();
+            v = MyPV(POSITION, ALPHA - depth, BETA + depth, depth - 4, check);
+            CHECK_HALT();
 
-            if( v > Alpha - depth )
-                trans_move = (TempPosition + 1)->move;
+            if( v > ALPHA - depth )
+                trans_move = (POS0 + 1)->move;
             }
         }
 
     NextMove->trans_move = trans_move;
-    NextMove->phase = Trans;
-    Extend = 0;
+    NextMove->phase = TRANS;
+    EXTEND = 0;
     NextMove->TARGET = OppOccupied;
 
-    Singular = 0;
+    SINGULAR = 0;
 
     if( check )
         {
-        list = MyEvasion(Position, NextMove->List, 0xffffffffffffffff);
-        NextMove->phase = Evade_Phase;
+        list = MyEvasion(POSITION, NextMove->LIST, 0xffffffffffffffff);
+        NextMove->phase = EVADE_PHASE;
 
-        for ( p = list - 1; p >= NextMove->List; p-- )
+        for ( p = list - 1; p >= NextMove->LIST; p-- )
             {
             if( (p->move & 0x7fff) == trans_move )
                 p->move |= 0xffff0000;
             else if( p->move <= (0x80 << 24) )
                 {
-                if( (p->move & 0x7fff) == TempPosition->killer1 )
+                if( (p->move & 0x7fff) == POS0->killer1 )
                     p->move |= 0x7fff8000;
 
-                else if( (p->move & 0x7fff) == TempPosition->killer2 )
+                else if( (p->move & 0x7fff) == POS0->killer2 )
                     p->move |= 0x7fff0000;
 
                 else
-                    p->move |= (p->move & 0x7fff) | (HistoryValue(Position, p->move) << 15);
+                    p->move |= (p->move & 0x7fff) | (HISTORY_VALUE(POSITION, p->move) << 15);
                 }
             move = p->move;
 
@@ -157,193 +160,193 @@ int MyPV( typePos *Position, int Alpha, int Beta, int depth, int check )
             q->move = move;
             }
 
-        if( (list - NextMove->List) <= 1 )
-            Singular = 2;
+        if( (list - NextMove->LIST) <= 1 )
+            SINGULAR = 2;
 
-        if( (list - NextMove->List) == 2 )
-            Singular = 1;
+        if( (list - NextMove->LIST) == 2 )
+            SINGULAR = 1;
 
-        if( (list - NextMove->List) > 2 )
-            Singular = 0;
+        if( (list - NextMove->LIST) > 2 )
+            SINGULAR = 0;
         }
 
-    if( depth >= 16 && NextMove->trans_move && Singular < 2 && MyOK(Position, NextMove->trans_move) )
+    if( depth >= 16 && NextMove->trans_move && SINGULAR < 2 && MyOK(POSITION, NextMove->trans_move) )
         {
         move = NextMove->trans_move;
-        to = To(move);
-        fr = From(move);
-        Make(Position, move);
+        to = TO(move);
+        fr = FROM(move);
+        MAKE(POSITION, move);
         EVAL(move);
 
-        if( IllegalMove )
+        if( ILLEGAL_MOVE )
             {
-            Undo(Position, move);
+            UNDO(POSITION, move);
             goto SKIP;
             }
-        Value = -OppPV(Position, -Beta, -Alpha, depth - 10, (MoveIsCheck) != 0);
-        Undo(Position, move);
-        CheckHalt();
-#define DepthRed (MIN (12, depth / 2))
-#define ValueRed1 (depth / 2)
-#define ValueRed2 (depth)
+        Value = -OppPV(POSITION, -BETA, -ALPHA, depth - 10, (MOVE_IS_CHECK) != 0);
+        UNDO(POSITION, move);
+        CHECK_HALT();
+#define DEPTH_RED (MIN (12, depth / 2))
+#define VALUE_RED1 (depth / 2)
+#define VALUE_RED2 (depth)
 		if (check)
-			v = MyExcludeCheck (Position, Value - ValueRed1,
-			    depth - DepthRed, move & 0x7fff);
+			v = MyExcludeCheck (POSITION, Value - VALUE_RED1,
+			    depth - DEPTH_RED, move & 0x7fff);
 		else
-			v = MyExclude (Position, Value - ValueRed1,
-		       depth - DepthRed, move & 0x7fff);
-		CheckHalt();
-		if (v < Value - ValueRed1)
+			v = MyExclude (POSITION, Value - VALUE_RED1,
+		       depth - DEPTH_RED, move & 0x7fff);
+		CHECK_HALT();
+		if (v < Value - VALUE_RED1)
 			{	
-			Singular = 1;
+			SINGULAR = 1;
 			if (check)
-				v = MyExcludeCheck (Position, Value - ValueRed2,
-			depth - DepthRed, move & 0x7fff);
+				v = MyExcludeCheck (POSITION, Value - VALUE_RED2,
+			depth - DEPTH_RED, move & 0x7fff);
 			else
-				v = MyExclude (Position, Value - ValueRed2,
-			depth - DepthRed, move & 0x7fff);
-			CheckHalt();
-			if (v < Value - ValueRed2)
-				Singular = 2;
+				v = MyExclude (POSITION, Value - VALUE_RED2,
+			depth - DEPTH_RED, move & 0x7fff);
+			CHECK_HALT();
+			if (v < Value - VALUE_RED2)
+				SINGULAR = 2;
             }
         }
     SKIP:
-    best_value = -ValueInfinity;
+    best_value = -VALUE_INFINITY;
     NextMove->move = 0;
     NextMove->bc = 0;
     good_move = 0;
-    Split = false;
+    SPLIT = false;
 
     while( true )
         {
-        if( SMPfree != 0 && !check && depth >= PVSplitDepth && !Split && best_value != -ValueInfinity )
+        if( SMP_FREE != 0 && !check && depth >= PV_SPLIT_DEPTH && !SPLIT && best_value != -VALUE_INFINITY )
             {
             int r;
             boolean b;
-            Split = true;
-            b = SMPSplit(Position, NextMove, depth, Beta, Alpha, NodeTypePV, &r);
-            CheckHalt();
+            SPLIT = true;
+            b = IVAN_SPLIT(POSITION, NextMove, depth, BETA, ALPHA, NODE_TYPE_PV, &r);
+            CHECK_HALT();
 
             if( b )
                 {
-                if( r > Alpha || !good_move )
+                if( r > ALPHA || !good_move )
                     return r;
                 move = good_move;
-                (TempPosition + 1)->move = good_move & 0x7fff;
+                (POS0 + 1)->move = good_move & 0x7fff;
                 best_value = r;
                 goto IVAN;
                 }
             }
 
-        move = MyNext(Position, NextMove);
+        move = MyNext(POSITION, NextMove);
 
         if( !move )
             break;
-        to = To(move);
-        fr = From(move);
+        to = TO(move);
+        fr = FROM(move);
 
-        if( Alpha > 0 && TempPosition->reversible >= 2 && ((To(move) << 6) | From(move)) == (TempPosition - 1)->move
-            && Position->sq[To(move)] == 0 )
+        if( ALPHA > 0 && POS0->reversible >= 2 && ((TO(move) << 6) | FROM(move)) == (POS0 - 1)->move
+            && POSITION->sq[TO(move)] == 0 )
             {
             best_value = MAX(0, best_value);
             continue;
             }
         move &= 0x7fff;
-        Make(Position, move);
+        MAKE(POSITION, move);
         EVAL(move);
 
-        if( IllegalMove )
+        if( ILLEGAL_MOVE )
             {
-            Undo(Position, move);
+            UNDO(POSITION, move);
             continue;
             }
-        move_is_check = (MoveIsCheck != 0);
-        Extend = 0;
+        move_is_check = (MOVE_IS_CHECK != 0);
+        EXTEND = 0;
 
-        if( Extend < 2 )
+        if( EXTEND < 2 )
             {
-            if( PassedPawnPush(to, SixthRank(to)) )
-                Extend = 2;
+            if( PassedPawnPush(to, SIXTH_RANK(to)) )
+                EXTEND = 2;
             }
 
-        if( Extend < 2 )
+        if( EXTEND < 2 )
             {
-            if( Pos1->cp != 0 || move_is_check || (check && EarlyGame) )
-                Extend = 1;
+            if( POS1->cp != 0 || move_is_check || (check && EARLY_GAME) )
+                EXTEND = 1;
 
-            else if( PassedPawnPush(to, FourthRank(to)) )
-                Extend = 1;
+            else if( PassedPawnPush(to, FOURTH_RANK(to)) )
+                EXTEND = 1;
             }
 
         if( NextMove->trans_move != move )
-            Singular = 0;
-        new_depth = depth - 2 + MAX(Extend, Singular);
+            SINGULAR = 0;
+        new_depth = depth - 2 + MAX(EXTEND, SINGULAR);
 
-        if( PosIsExact(Position->Current->exact) )
-            v = -Position->Current->Value;
+        if( IS_EXACT(POSITION->DYN->exact) )
+            v = -POSITION->DYN->Value;
         else if( NextMove->trans_move != move && new_depth > 1 )
             {
-            if( LowDepthConditionPV )
+            if( LOW_DEPTH_CONDITION_PV )
                 {
                 if( move_is_check )
-                    v = -OppLowDepthCheck(Position, -Alpha, new_depth);
+                    v = -OppLowDepthCheck(POSITION, -ALPHA, new_depth);
                 else
-                    v = -OppLowDepth(Position, -Alpha, new_depth);
+                    v = -OppLowDepth(POSITION, -ALPHA, new_depth);
                 }
             else
                 {
                 if( move_is_check )
-                    v = -OppCutCheck(Position, -Alpha, new_depth);
+                    v = -OppCutCheck(POSITION, -ALPHA, new_depth);
                 else
-                    v = -OppCut(Position, -Alpha, new_depth);
+                    v = -OppCut(POSITION, -ALPHA, new_depth);
                 }
 
-            if( v > Alpha )
-                v = -OppPV(Position, -Beta, -Alpha, new_depth, move_is_check);
+            if( v > ALPHA )
+                v = -OppPV(POSITION, -BETA, -ALPHA, new_depth, move_is_check);
             }
         else
-            v = -OppPV(Position, -Beta, -Alpha, new_depth, move_is_check);
-        Undo(Position, move);
-        CheckHalt();
+            v = -OppPV(POSITION, -BETA, -ALPHA, new_depth, move_is_check);
+        UNDO(POSITION, move);
+        CHECK_HALT();
 
-        if( v <= Alpha && Position->sq[To(move)] == 0 && MoveHistory(move) )
-            HistoryBad1(move, depth);
+        if( v <= ALPHA && POSITION->sq[TO(move)] == 0 && MoveHistory(move) )
+            HISTORY_BAD1(move, depth);
 
         if( v <= best_value )
             continue;
         best_value = v;
 
-        if( v <= Alpha )
+        if( v <= ALPHA )
             continue;
-        Alpha = v;
+        ALPHA = v;
         good_move = move;
-        HashLower(Position->Current->Hash, move, depth, v);
+        HashLower(POSITION->DYN->HASH, move, depth, v);
 
-        if( v >= Beta )
+        if( v >= BETA )
             {
-            if( Position->sq[To(move)] == 0 && MoveHistory(move) )
-                HistoryGood(move, depth);
+            if( POSITION->sq[TO(move)] == 0 && MoveHistory(move) )
+                HISTORY_GOOD(move, depth);
             return (v);
             }
         }
 
     move = good_move;
-    (TempPosition + 1)->move = good_move & 0x7fff;
+    (POS0 + 1)->move = good_move & 0x7fff;
 
-    if( best_value == -ValueInfinity )
+    if( best_value == -VALUE_INFINITY )
         {
         if( !check )
             return (0);
-        return (Height(Position) - ValueMate);
+        return (HEIGHT(POSITION) - VALUE_MATE);
         }
     IVAN:
     if( move )
         {
-        if( Position->sq[To(move)] == 0 && MoveHistory(move) )
-            HistoryGood(move, depth);
-        HashExact(Position, move, depth, best_value, FlagExact);
+        if( POSITION->sq[TO(move)] == 0 && MoveHistory(move) )
+            HISTORY_GOOD(move, depth);
+        HashExact(POSITION, move, depth, best_value, FLAG_EXACT);
         return (best_value);
         }
-    HashUpper(Position->Current->Hash, depth, best_value);
+    HashUpper(POSITION->DYN->HASH, depth, best_value);
     return (best_value);
     }

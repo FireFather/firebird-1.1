@@ -7,57 +7,58 @@
 #include "black.h"
 #endif
 
-int MyPVQsearch( typePos *Position, int Alpha, int Beta, int depth )
+int MyPVQsearch( typePOS *POSITION, int ALPHA, int BETA, int depth )
     {
     int i;
-    uint32 good_move = 0, trans_move = 0, move, BadCaps[64];
+    uint32 good_move = 0, trans_move = 0, move, BAD_CAPS[64];
     uint32 trans_depth, move_depth = 0;
     int best_value, Value;
     uint64 TARGET;
-    typeMoveList List[512], *list, *p, *q;
-    int Temp, v;
-    typePosition *TempPosition = Position->Current;
-    int k = Position->Current->Hash & HashMask;
+    typeMoveList LIST[512], *list, *p, *q;
+    int TEMP, v;
+    typeDYNAMIC *POS0 = POSITION->DYN;
+    int k = POSITION->DYN->HASH & HashMask;
     int bc = 0;
-    typeHash *rank;
+    typeHash *trans;
+    DECLARE();
 
     CheckRepetition;
 
-    if( Beta < -ValueMate )
-        return(-ValueMate);
+    if( BETA < -VALUE_MATE )
+        return(-VALUE_MATE);
 
-    if( Alpha > ValueMate )
-        return(ValueMate);
+    if( ALPHA > VALUE_MATE )
+        return(VALUE_MATE);
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( (rank->hash ^ (Position->Current->Hash >> 32)) == 0 )
+        if( (trans->hash ^ (POSITION->DYN->HASH >> 32)) == 0 )
             {
-            if( IsExact(rank) )
+            if( IsExact(trans) )
                 {
-                Value = HashUpperBound(rank);
+                Value = HashUpperBound(trans);
                 return(Value);
                 }
 
-            if( rank->DepthLower )
+            if( trans->DepthLower )
                 {
-                Value = HashLowerBound(rank);
+                Value = HashLowerBound(trans);
 
-                if( Value >= Beta )
+                if( Value >= BETA )
                     return(Value);
                 }
 
-            if( rank->DepthUpper )
+            if( trans->DepthUpper )
                 {
-                Value = HashUpperBound(rank);
+                Value = HashUpperBound(trans);
 
-                if( Value <= Alpha )
+                if( Value <= ALPHA )
                     return(Value);
                 }
-            trans_depth = rank->DepthLower;
-            move = rank->move;
+            trans_depth = trans->DepthLower;
+            move = trans->move;
 
             if( move && trans_depth > move_depth )
                 {
@@ -66,36 +67,36 @@ int MyPVQsearch( typePos *Position, int Alpha, int Beta, int depth )
                 }
             }
         }
-    best_value = TempPosition->Value + TempoValue2;
+    best_value = POS0->Value + TempoValue2;
     TARGET = OppOccupied;
 
-    if( best_value >= Beta )
+    if( best_value >= BETA )
         {
         return(best_value);
         }
 
-    else if( best_value > Alpha )
-        Alpha = best_value;
+    else if( best_value > ALPHA )
+        ALPHA = best_value;
 
     else
         {
-        if( best_value < Alpha - PrunePawn )
+        if( best_value < ALPHA - PrunePawn )
             {
             TARGET ^= BitboardOppP;
 
-            if( best_value < Alpha - PruneMinor )
+            if( best_value < ALPHA - PruneMinor )
                 {
                 TARGET ^= (BitboardOppN | BitboardOppB);
 
-                if( best_value < Alpha - PruneRook )
+                if( best_value < ALPHA - PruneRook )
                     TARGET ^= BitboardOppR;
                 }
             best_value += PrunePawn;
             }
         }
 
-    list = MyCapture(Position, List, TARGET);
-    p = List;
+    list = MyCapture(POSITION, LIST, TARGET);
+    p = LIST;
 
     while( p->move )
         {
@@ -103,7 +104,7 @@ int MyPVQsearch( typePos *Position, int Alpha, int Beta, int depth )
             p->move |= 0xffff0000;
         p++;
         }
-    p = List;
+    p = LIST;
 
     while( p->move )
         {
@@ -114,172 +115,172 @@ int MyPVQsearch( typePos *Position, int Alpha, int Beta, int depth )
             {
             if( move < q->move )
                 {
-                Temp = q->move;
+                TEMP = q->move;
                 q->move = move;
-                move = Temp;
+                move = TEMP;
                 }
             q++;
             }
 
-        if( EasySEE(move) || (move & 0x7fff) == trans_move || MySEE(Position, move) )
+        if( EasySEE(move) || (move & 0x7fff) == trans_move || MySEE(POSITION, move) )
             {
             move &= 0x7fff;
-            Make(Position, move);
+            MAKE(POSITION, move);
             EVAL(move);
 
-            if( IllegalMove )
+            if( ILLEGAL_MOVE )
                 {
-                Undo(Position, move);
+                UNDO(POSITION, move);
                 continue;
                 }
 
-            if( PosIsExact(Position->Current->exact) )
-                v = -Position->Current->Value;
+            if( IS_EXACT(POSITION->DYN->exact) )
+                v = -POSITION->DYN->Value;
 
-            else if( MoveIsCheck )
-                v = -OppPVQsearchCheck(Position, -Beta, -Alpha, depth - 1);
+            else if( MOVE_IS_CHECK )
+                v = -OppPVQsearchCheck(POSITION, -BETA, -ALPHA, depth - 1);
             else
-                v = -OppPVQsearch(Position, -Beta, -Alpha, depth - 1);
-            Undo(Position, move);
-            CheckHalt();
+                v = -OppPVQsearch(POSITION, -BETA, -ALPHA, depth - 1);
+            UNDO(POSITION, move);
+            CHECK_HALT();
 
             if( v <= best_value )
                 continue;
             best_value = v;
 
-            if( v <= Alpha )
+            if( v <= ALPHA )
                 continue;
-            Alpha = v;
+            ALPHA = v;
             good_move = move;
 
-            if( v >= Beta )
+            if( v >= BETA )
                 {
-                HashLower(Position->Current->Hash, move, 1, v);
+                HashLower(POSITION->DYN->HASH, move, 1, v);
                 return(v);
                 }
             }
         else
-            BadCaps[bc++] = move;
+            BAD_CAPS[bc++] = move;
         }
 
     if( depth > 0 )
         for ( i = 0; i < bc; i++ )
             {
-            move = BadCaps[i] & 0x7fff;
-            Make(Position, move);
+            move = BAD_CAPS[i] & 0x7fff;
+            MAKE(POSITION, move);
             EVAL(move);
 
-            if( IllegalMove )
+            if( ILLEGAL_MOVE )
                 {
-                Undo(Position, move);
+                UNDO(POSITION, move);
                 continue;
                 }
 
-            if( PosIsExact(Position->Current->exact) )
-                v = -Position->Current->Value;
+            if( IS_EXACT(POSITION->DYN->exact) )
+                v = -POSITION->DYN->Value;
 
-            else if( MoveIsCheck )
-                v = -OppPVQsearchCheck(Position, -Beta, -Alpha, depth - 1);
+            else if( MOVE_IS_CHECK )
+                v = -OppPVQsearchCheck(POSITION, -BETA, -ALPHA, depth - 1);
             else
-                v = -OppPVQsearch(Position, -Beta, -Alpha, depth - 1);
-            Undo(Position, move);
-            CheckHalt();
+                v = -OppPVQsearch(POSITION, -BETA, -ALPHA, depth - 1);
+            UNDO(POSITION, move);
+            CHECK_HALT();
 
             if( v <= best_value )
                 continue;
             best_value = v;
 
-            if( v <= Alpha )
+            if( v <= ALPHA )
                 continue;
-            Alpha = v;
+            ALPHA = v;
             good_move = move;
 
-            if( v >= Beta )
+            if( v >= BETA )
                 {
-                HashLower(Position->Current->Hash, move, 1, v);
+                HashLower(POSITION->DYN->HASH, move, 1, v);
                 return(v);
                 }
             }
 
-    if( depth >= -2 && TempPosition->Value >= Alpha - (100 + (12 << (depth + 5))) )
+    if( depth >= -2 && POS0->Value >= ALPHA - (100 + (12 << (depth + 5))) )
         {
-        list = MyQuietChecks(Position, List, TARGET);
+        list = MyQuietChecks(POSITION, LIST, TARGET);
 
-        for ( i = 0; i < list - List; i++ )
+        for ( i = 0; i < list - LIST; i++ )
             {
-            move = List[i].move & 0x7fff;
-            Make(Position, move);
+            move = LIST[i].move & 0x7fff;
+            MAKE(POSITION, move);
             EVAL(move);
 
-            if( IllegalMove )
+            if( ILLEGAL_MOVE )
                 {
-                Undo(Position, move);
+                UNDO(POSITION, move);
                 continue;
                 }
 
-            if( PosIsExact(Position->Current->exact) )
-                v = -Position->Current->Value;
+            if( IS_EXACT(POSITION->DYN->exact) )
+                v = -POSITION->DYN->Value;
             else
-                v = -OppPVQsearchCheck(Position, -Beta, -Alpha, depth - 1);
-            Undo(Position, move);
-            CheckHalt();
+                v = -OppPVQsearchCheck(POSITION, -BETA, -ALPHA, depth - 1);
+            UNDO(POSITION, move);
+            CHECK_HALT();
 
             if( v <= best_value )
                 continue;
             best_value = v;
 
-            if( v <= Alpha )
+            if( v <= ALPHA )
                 continue;
-            Alpha = v;
+            ALPHA = v;
             good_move = move;
 
-            if( v >= Beta )
+            if( v >= BETA )
                 {
-                HashLower(Position->Current->Hash, move, 1, v);
+                HashLower(POSITION->DYN->HASH, move, 1, v);
                 return(v);
                 }
             }
 
-        if( depth >= 0 && Alpha <= TempPosition->Value + 150 )
+        if( depth >= 0 && ALPHA <= POS0->Value + 150 )
             {
-            list = MyPositionalGain(Position, List, Alpha - TempPosition->Value);
+            list = MyPositionalGain(POSITION, LIST, ALPHA - POS0->Value);
 
-            for ( i = 0; i < list - List; i++ )
+            for ( i = 0; i < list - LIST; i++ )
                 {
-                move = List[i].move & 0x7fff;
-                Make(Position, move);
+                move = LIST[i].move & 0x7fff;
+                MAKE(POSITION, move);
                 EVAL(move);
 
-                if( -Pos1->Value < Alpha )
+                if( -POS1->Value < ALPHA )
                     {
-                    Undo(Position, move);
+                    UNDO(POSITION, move);
                     continue;
                     }
 
-                if( IllegalMove || MoveIsCheck )
+                if( ILLEGAL_MOVE || MOVE_IS_CHECK )
                     {
-                    Undo(Position, move);
+                    UNDO(POSITION, move);
                     continue;
                     }
 
-                if( PosIsExact(Position->Current->exact) )
-                    v = -Position->Current->Value;
+                if( IS_EXACT(POSITION->DYN->exact) )
+                    v = -POSITION->DYN->Value;
                 else
-                    v = -OppPVQsearch(Position, -Beta, -Alpha, 0);
-                Undo(Position, move);
-                CheckHalt();
+                    v = -OppPVQsearch(POSITION, -BETA, -ALPHA, 0);
+                UNDO(POSITION, move);
+                CHECK_HALT();
 
                 if( v <= best_value )
                     continue;
                 best_value = v;
 
-                if( v <= Alpha )
+                if( v <= ALPHA )
                     continue;
-                Alpha = v;
+                ALPHA = v;
                 good_move = move;
-                HashLower(Position->Current->Hash, move, 1, v);
+                HashLower(POSITION->DYN->HASH, move, 1, v);
 
-                if( v >= Beta )
+                if( v >= BETA )
                     return(v);
                 }
             }
@@ -287,62 +288,63 @@ int MyPVQsearch( typePos *Position, int Alpha, int Beta, int depth )
 
     if( good_move )
         {
-        HashExact(Position, good_move, 1, best_value, FlagExact);
+        HashExact(POSITION, good_move, 1, best_value, FLAG_EXACT);
         return(best_value);
         }
-    HashUpper(Position->Current->Hash, 1, best_value);
+    HashUpper(POSITION->DYN->HASH, 1, best_value);
     return(best_value);
     }
 
-int MyPVQsearchCheck( typePos *Position, int Alpha, int Beta, int depth )
+int MyPVQsearchCheck( typePOS *POSITION, int ALPHA, int BETA, int depth )
     {
     int i;
-    uint32 trans_move = 0, good_move = 0, move, Temp;
+    uint32 trans_move = 0, good_move = 0, move, TEMP;
     int best_value, Value;
     uint64 TARGET;
-    typeMoveList List[512], *list, *p, *q;
-    int k = Position->Current->Hash & HashMask;
+    typeMoveList LIST[512], *list, *p, *q;
+    int k = POSITION->DYN->HASH & HashMask;
     int v, trans_depth, move_depth = 0;
-    typePosition *TempPosition = Position->Current;
-    typeHash *rank;
+    typeDYNAMIC *POS0 = POSITION->DYN;
+    typeHash *trans;
+    DECLARE();
 
     CheckRepetition;
 
-    if( Beta < -ValueMate )
-        return(-ValueMate);
+    if( BETA < -VALUE_MATE )
+        return(-VALUE_MATE);
 
-    if( Alpha > ValueMate )
-        return(ValueMate);
+    if( ALPHA > VALUE_MATE )
+        return(VALUE_MATE);
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( (rank->hash ^ (Position->Current->Hash >> 32)) == 0 )
+        if( (trans->hash ^ (POSITION->DYN->HASH >> 32)) == 0 )
             {
-            if( IsExact(rank) )
+            if( IsExact(trans) )
                 {
-                Value = HashUpperBound(rank);
+                Value = HashUpperBound(trans);
                 return(Value);
                 }
 
-            if( rank->DepthLower )
+            if( trans->DepthLower )
                 {
-                Value = HashLowerBound(rank);
+                Value = HashLowerBound(trans);
 
-                if( Value >= Beta )
+                if( Value >= BETA )
                     return(Value);
                 }
 
-            if( rank->DepthUpper )
+            if( trans->DepthUpper )
                 {
-                Value = HashUpperBound(rank);
+                Value = HashUpperBound(trans);
 
-                if( Value <= Alpha )
+                if( Value <= ALPHA )
                     return(Value);
                 }
-            trans_depth = rank->DepthLower;
-            move = rank->move;
+            trans_depth = trans->DepthLower;
+            move = trans->move;
 
             if( move && trans_depth > move_depth )
                 {
@@ -351,30 +353,30 @@ int MyPVQsearchCheck( typePos *Position, int Alpha, int Beta, int depth )
                 }
             }
         }
-    best_value = Height(Position) - ValueMate;
+    best_value = HEIGHT(POSITION) - VALUE_MATE;
     TARGET = 0xffffffffffffffff;
 
-    if( TempPosition->Value + PruneCheck < Alpha )
+    if( POS0->Value + PruneCheck < ALPHA )
         {
-        best_value = TempPosition->Value + PruneCheck;
-        v = Alpha - 200;
+        best_value = POS0->Value + PruneCheck;
+        v = ALPHA - 200;
         TARGET = OppOccupied;
 
         if( v > best_value )
             {
             TARGET ^= BitboardOppP;
-            v = Alpha - 500;
+            v = ALPHA - 500;
             best_value += 200;
 
             if( v > best_value )
                 TARGET ^= (BitboardOppN | BitboardOppB);
             }
         }
-    list = MyEvasion(Position, List, TARGET);
+    list = MyEvasion(POSITION, LIST, TARGET);
 
-    if( (list - List) != 1 )
+    if( (list - LIST) != 1 )
         depth--;
-    p = List;
+    p = LIST;
 
     while( p->move )
         {
@@ -382,7 +384,7 @@ int MyPVQsearchCheck( typePos *Position, int Alpha, int Beta, int depth )
             p->move |= 0xfff00000;
         p++;
         }
-    p = List;
+    p = LIST;
 
     while( p->move )
         {
@@ -393,51 +395,51 @@ int MyPVQsearchCheck( typePos *Position, int Alpha, int Beta, int depth )
             {
             if( move < q->move )
                 {
-                Temp = q->move;
+                TEMP = q->move;
                 q->move = move;
-                move = Temp;
+                move = TEMP;
                 }
             q++;
             }
         move &= 0x7fff;
-        Make(Position, move);
+        MAKE(POSITION, move);
         EVAL(move);
 
-        if( IllegalMove )
+        if( ILLEGAL_MOVE )
             {
-            Undo(Position, move);
+            UNDO(POSITION, move);
             continue;
             }
 
-        if( PosIsExact(Position->Current->exact) )
-            v = -Position->Current->Value;
+        if( IS_EXACT(POSITION->DYN->exact) )
+            v = -POSITION->DYN->Value;
 
-        else if( MoveIsCheck )
-            v = -OppPVQsearchCheck(Position, -Beta, -Alpha, depth);
+        else if( MOVE_IS_CHECK )
+            v = -OppPVQsearchCheck(POSITION, -BETA, -ALPHA, depth);
         else
-            v = -OppPVQsearch(Position, -Beta, -Alpha, depth);
-        Undo(Position, move);
-        CheckHalt();
+            v = -OppPVQsearch(POSITION, -BETA, -ALPHA, depth);
+        UNDO(POSITION, move);
+        CHECK_HALT();
 
         if( v <= best_value )
             continue;
         best_value = v;
 
-        if( v <= Alpha )
+        if( v <= ALPHA )
             continue;
-        Alpha = v;
+        ALPHA = v;
         good_move = move;
-        HashLower(Position->Current->Hash, move, 1, v);
+        HashLower(POSITION->DYN->HASH, move, 1, v);
 
-        if( v >= Beta )
+        if( v >= BETA )
             return(v);
         }
 
     if( good_move )
         {
-        HashExact(Position, good_move, 1, best_value, FlagExact);
+        HashExact(POSITION, good_move, 1, best_value, FLAG_EXACT);
         return(best_value);
         }
-    HashUpper(Position->Current->Hash, 1, best_value);
+    HashUpper(POSITION->DYN->HASH, 1, best_value);
     return(best_value);
     }

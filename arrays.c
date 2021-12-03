@@ -1,14 +1,90 @@
 #include "firebird.h"
 
+const uint8 Left90[64] =
+  {
+    7, 15, 23, 31, 39, 47, 55, 63,
+    6, 14, 22, 30, 38, 46, 54, 62,
+    5, 13, 21, 29, 37, 45, 53, 61,
+    4, 12, 20, 28, 36, 44, 52, 60,
+    3, 11, 19, 27, 35, 43, 51, 59,
+    2, 10, 18, 26, 34, 42, 50, 58,
+    1, 9, 17, 25, 33, 41, 49, 57,
+    0, 8, 16, 24, 32, 40, 48, 56
+  };
+
+const uint8 Left45[64] =
+  {
+    0, 2, 5, 9, 14, 20, 27, 35,
+    1, 4, 8, 13, 19, 26, 34, 42,
+    3, 7, 12, 18, 25, 33, 41, 48,
+    6, 11, 17, 24, 32, 40, 47, 53,
+    10, 16, 23, 31, 39, 46, 52, 57,
+    15, 22, 30, 38, 45, 51, 56, 60,
+    21, 29, 37, 44, 50, 55, 59, 62,
+    28, 36, 43, 49, 54, 58, 61, 63
+  };
+
+const uint8 Right45[64] =
+  {
+    28, 21, 15, 10, 6, 3, 1, 0,
+    36, 29, 22, 16, 11, 7, 4, 2,
+    43, 37, 30, 23, 17, 12, 8, 5,
+    49, 44, 38, 31, 24, 18, 13, 9,
+    54, 50, 45, 39, 32, 25, 19, 14,
+    58, 55, 51, 46, 40, 33, 26, 20,
+    61, 59, 56, 52, 47, 41, 34, 27,
+    63, 62, 60, 57, 53, 48, 42, 35
+  };
+
+static int LEFT54[64], RIGHT54[64], LEFT09[64];
+static int SHIFT[64] =
+  {
+    1,
+    2, 2,
+    4, 4, 4,
+    7, 7, 7, 7,
+    11, 11, 11, 11, 11,
+    16, 16, 16, 16, 16, 16,
+    22, 22, 22, 22, 22, 22, 22,
+    29, 29, 29, 29, 29, 29, 29, 29,
+    37, 37, 37, 37, 37, 37, 37,
+    44, 44, 44, 44, 44, 44,
+    50, 50, 50, 50, 50,
+    55, 55, 55, 55,
+    59, 59, 59,
+    62, 62,
+    64
+  };
+static int LENGTH[64], WHERE[64];
+static int HOP[8] =
+    {
+    6, 10, 15, 17, -6, -10, -15, -17
+    };
+
+static uint64 randkey = 1;
+uint16 RAND16()
+    {
+    randkey = randkey * 8765432181103515245ULL + 1234567891ULL;
+    return ((randkey >> 32) % 65536);
+    }
+static uint64 GET_RAND()
+    {
+	return (((uint64) RAND16()) << 48) |
+		(((uint64) RAND16()) << 32) |
+		(((uint64) RAND16()) << 16) |
+		(((uint64) RAND16()) << 0);
+    }
+
+extern void InitRandom32( uint64 );
 void InitZobrist()
     {
     int i, j;
-    ZobristWTM = GetRand();
+    ZobristWTM = GET_RAND();
     ZobristCastling[0] = 0;
-    ZobristCastling[1] = GetRand();
-    ZobristCastling[2] = GetRand();
-    ZobristCastling[4] = GetRand();
-    ZobristCastling[8] = GetRand();
+    ZobristCastling[1] = GET_RAND();
+    ZobristCastling[2] = GET_RAND();
+    ZobristCastling[4] = GET_RAND();
+    ZobristCastling[8] = GET_RAND();
 
     for ( i = 0; i < 16; i++ )
         {
@@ -23,22 +99,22 @@ void InitZobrist()
 
     for ( i = 0; i < 16; i++ )
         for ( j = A1; j <= H8; j++ )
-            Hash[i][j] = GetRand();
+            HASH[i][j] = GET_RAND();
 
     for ( i = FA; i <= FH; i++ )
-        ZobristEP[i] = GetRand();
-    InitRandom32(GetRand());
+        ZobristEP[i] = GET_RAND();
+    InitRandom32(GET_RAND());
     }
 
 void InitArrays()
     {
-    int sq2, l, w, i, sq = 0, j, u, file, rank, king, dir;
+    int sq2, l, w, i, sq = 0, j, u, co, trans, king, dir;
     uint64 T, b, s;
 
     for ( i = A1; i <= H8; i++ )
         {
-        ShiftLeft45[i] = Shift[Left45[i]];
-        ShiftRight45[i] = Shift[Right45[i]];
+        ShiftLeft45[i] = SHIFT[Left45[i]];
+        ShiftRight45[i] = SHIFT[Right45[i]];
         }
 
     for ( i = A1; i <= H8; i++ )
@@ -50,22 +126,22 @@ void InitArrays()
     for ( i = 1; i <= 8; i++ )
         for ( j = 1; j <= i; j++ )
             {
-            Length[sq] = i;
-            Where[sq++] = j - 1;
+            LENGTH[sq] = i;
+            WHERE[sq++] = j - 1;
             }
 
     for ( i = 7; i >= 1; i-- )
         for ( j = 1; j <= i; j++ )
             {
-            Length[sq] = i;
-            Where[sq++] = j - 1;
+            LENGTH[sq] = i;
+            WHERE[sq++] = j - 1;
             }
 
     for ( i = A1; i <= H8; i++ )
         {
-        Left54[Left45[i]] = i;
-        Left09[Left90[i]] = i;
-        Right54[Right45[i]] = i;
+        LEFT54[Left45[i]] = i;
+        LEFT09[Left90[i]] = i;
+        RIGHT54[Right45[i]] = i;
         }
 
     for ( i = A1; i <= H8; i++ )
@@ -94,7 +170,7 @@ void InitArrays()
 
         for ( j = 0; j < 8; j++ )
             {
-            sq = i + Hop[j];
+            sq = i + HOP[j];
 
             if( (sq < A1) || (sq > H8) )
                 continue;
@@ -158,56 +234,56 @@ void InitArrays()
     IsolatedFiles[FA] = FILEb;
     IsolatedFiles[FH] = FILEg;
 
-    for ( file = FB; file <= FG; file++ )
-        IsolatedFiles[file] = FileArray[file - 1] | FileArray[file + 1];
+    for ( co = FB; co <= FG; co++ )
+        IsolatedFiles[co] = FileArray[co - 1] | FileArray[co + 1];
 
     for ( sq = A1; sq <= H8; sq++ )
         {
         IsolatedPawnW[sq] = 0;
         IsolatedPawnB[sq] = 0;
-        file = FILE(sq);
-        rank = RANK(sq);
+        co = FILE(sq);
+        trans = RANK(sq);
 
-        if( rank < R8 )
-            IsolatedPawnW[sq] |= IsolatedFiles[file] & RankArray[rank + 1];
+        if( trans < R8 )
+            IsolatedPawnW[sq] |= IsolatedFiles[co] & RankArray[trans + 1];
 
-        if( rank < R7 )
-            IsolatedPawnW[sq] |= IsolatedFiles[file] & RankArray[rank + 2];
+        if( trans < R7 )
+            IsolatedPawnW[sq] |= IsolatedFiles[co] & RankArray[trans + 2];
 
-        if( rank > R1 )
-            IsolatedPawnB[sq] |= IsolatedFiles[file] & RankArray[rank - 1];
+        if( trans > R1 )
+            IsolatedPawnB[sq] |= IsolatedFiles[co] & RankArray[trans - 1];
 
-        if( rank > R2 )
-            IsolatedPawnB[sq] |= IsolatedFiles[file] & RankArray[rank - 2];
-        ConnectedPawns[sq] = IsolatedPawnW[sq] | IsolatedPawnB[sq] | (RankArray[rank]&IsolatedFiles[file]);
+        if( trans > R2 )
+            IsolatedPawnB[sq] |= IsolatedFiles[co] & RankArray[trans - 2];
+        ConnectedPawns[sq] = IsolatedPawnW[sq] | IsolatedPawnB[sq] | (RankArray[trans]&IsolatedFiles[co]);
         }
 
-    for ( rank = R1; rank <= R8; rank++ )
+    for ( trans = R1; trans <= R8; trans++ )
         {
-        InFrontW[rank] = 0;
+        InFrontW[trans] = 0;
 
-        for ( j = rank + 1; j <= R8; j++ )
-            InFrontW[rank] |= RankArray[j];
-        NotInFrontW[rank] = ~InFrontW[rank];
+        for ( j = trans + 1; j <= R8; j++ )
+            InFrontW[trans] |= RankArray[j];
+        NotInFrontW[trans] = ~InFrontW[trans];
         }
 
-    for ( rank = R8; rank >= R1; rank-- )
+    for ( trans = R8; trans >= R1; trans-- )
         {
-        InFrontB[rank] = 0;
+        InFrontB[trans] = 0;
 
-        for ( j = rank - 1; j >= R1; j-- )
-            InFrontB[rank] |= RankArray[j];
-        NotInFrontB[rank] = ~InFrontB[rank];
+        for ( j = trans - 1; j >= R1; j-- )
+            InFrontB[trans] |= RankArray[j];
+        NotInFrontB[trans] = ~InFrontB[trans];
         }
 
     for ( u = 0; u < 128; u += 2 )
-        for ( file = FA; file <= FH; file++ )
+        for ( co = FA; co <= FH; co++ )
             {
             T = 0;
 
-            if( file < 7 )
+            if( co < 7 )
                 {
-                s = 1 << (file + 1);
+                s = 1 << (co + 1);
 
                 while( s < 256 )
                     {
@@ -220,9 +296,9 @@ void InitArrays()
                     }
                 }
 
-            if( file > 0 )
+            if( co > 0 )
                 {
-                s = 1 << (file - 1);
+                s = 1 << (co - 1);
 
                 while( s > 0 )
                     {
@@ -236,7 +312,7 @@ void InitArrays()
                 }
 
             for ( i = 0; i < 8; i++ )
-                AttNormal[file + 8 * i][u >> 1] = T << (8 * i);
+                AttNormal[co + 8 * i][u >> 1] = T << (8 * i);
             }
 
     for ( sq = A1; sq <= H8; sq++ )
@@ -248,25 +324,25 @@ void InitArrays()
     for ( sq = A1; sq <= H8; sq++ )
         {
         if( FILE(sq) >= FC )
-            Left2[sq] = SqSet[sq - 2];
+            LEFT2[sq] = SqSet[sq - 2];
         else
-            Left2[sq] = 0;
+            LEFT2[sq] = 0;
 
         if( FILE(sq) <= FF )
-            Right2[sq] = SqSet[sq + 2];
+            RIGHT2[sq] = SqSet[sq + 2];
         else
-            Right2[sq] = 0;
+            RIGHT2[sq] = 0;
 
         if( FILE(sq) >= FB )
-            Left1[sq] = SqSet[sq - 1];
+            LEFT1[sq] = SqSet[sq - 1];
         else
-            Left1[sq] = 0;
+            LEFT1[sq] = 0;
 
         if( FILE(sq) <= FG )
-            Right1[sq] = SqSet[sq + 1];
+            RIGHT1[sq] = SqSet[sq + 1];
         else
-            Right1[sq] = 0;
-        Adjacent[sq] = Left1[sq] | Right1[sq];
+            RIGHT1[sq] = 0;
+        ADJACENT[sq] = LEFT1[sq] | RIGHT1[sq];
         }
 
     for ( sq = A1; sq <= H8; sq++ )
@@ -277,44 +353,44 @@ void InitArrays()
 
     for ( sq = A1; sq <= H8; sq++ )
         {
-        file = FILE(sq);
-        rank = RANK(sq);
-        LongDiag[sq] = 0;
+        co = FILE(sq);
+        trans = RANK(sq);
+        LONG_DIAG[sq] = 0;
 
-        if( file <= FD )
+        if( co <= FD )
             {
-            while( file < FH && rank < R8 )
+            while( co < FH && trans < R8 )
                 {
-                file++;
-                rank++;
-                LongDiag[sq] |= SqSet[8 * rank + file];
+                co++;
+                trans++;
+                LONG_DIAG[sq] |= SqSet[8 * trans + co];
                 }
-            file = FILE(sq);
-            rank = RANK(sq);
+            co = FILE(sq);
+            trans = RANK(sq);
 
-            while( file < FH && rank > R1 )
+            while( co < FH && trans > R1 )
                 {
-                file++;
-                rank--;
-                LongDiag[sq] |= SqSet[8 * rank + file];
+                co++;
+                trans--;
+                LONG_DIAG[sq] |= SqSet[8 * trans + co];
                 }
             }
         else
             {
-            while( file > FA && rank < R8 )
+            while( co > FA && trans < R8 )
                 {
-                file--;
-                rank++;
-                LongDiag[sq] |= SqSet[8 * rank + file];
+                co--;
+                trans++;
+                LONG_DIAG[sq] |= SqSet[8 * trans + co];
                 }
-            file = FILE(sq);
-            rank = RANK(sq);
+            co = FILE(sq);
+            trans = RANK(sq);
 
-            while( file > FA && rank > R1 )
+            while( co > FA && trans > R1 )
                 {
-                file--;
-                rank--;
-                LongDiag[sq] |= SqSet[8 * rank + file];
+                co--;
+                trans--;
+                LONG_DIAG[sq] |= SqSet[8 * trans + co];
                 }
             }
         }
@@ -326,7 +402,7 @@ void InitArrays()
         OpenFileB[sq] = FileArray[FILE(sq)] & InFrontB[RANK(sq)];
 
     for ( sq = A1; sq <= H8; sq++ )
-        Doubled[sq] = FileArray[FILE(sq)] ^ (1ULL << sq);
+        DOUBLED[sq] = FileArray[FILE(sq)] ^ (1ULL << sq);
 
     for ( sq = A1; sq <= H8; sq++ )
         for ( i = 0; i < 64; i++ )
@@ -337,7 +413,7 @@ void InitArrays()
             while( T )
                 {
                 b = LSB(T);
-                AttLeft90[sq][i] |= SqSet[Left09[b]];
+                AttLeft90[sq][i] |= SqSet[LEFT09[b]];
                 BitClear(b, T);
                 }
             }
@@ -346,9 +422,9 @@ void InitArrays()
         for ( sq = A1; sq <= H8; sq++ )
             {
             T = 0;
-            l = Length[sq];
-            w = Where[sq];
-            AttRight45[Right54[sq]][u >> 1] = 0;
+            l = LENGTH[sq];
+            w = WHERE[sq];
+            AttRight45[RIGHT54[sq]][u >> 1] = 0;
 
             if( w < l )
                 {
@@ -384,7 +460,7 @@ void InitArrays()
             while( T )
                 {
                 b = LSB(T);
-                AttRight45[Right54[sq]][u >> 1] |= SqSet[Right54[b]];
+                AttRight45[RIGHT54[sq]][u >> 1] |= SqSet[RIGHT54[b]];
                 BitClear(b, T);
                 }
             }
@@ -393,9 +469,9 @@ void InitArrays()
         for ( sq = A1; sq <= H8; sq++ )
             {
             T = 0;
-            l = Length[sq];
-            w = Where[sq];
-            AttLeft45[Left54[sq]][u >> 1] = 0;
+            l = LENGTH[sq];
+            w = WHERE[sq];
+            AttLeft45[LEFT54[sq]][u >> 1] = 0;
 
             if( w < l )
                 {
@@ -431,12 +507,12 @@ void InitArrays()
             while( T )
                 {
                 b = LSB(T);
-                AttLeft45[Left54[sq]][u >> 1] |= SqSet[Left54[b]];
+                AttLeft45[LEFT54[sq]][u >> 1] |= SqSet[LEFT54[b]];
                 BitClear(b, T);
                 }
             }
 
-#define Distance(i, j) (MAX (FileDistance (i, j), RankDistance (i, j)))
+#define DISTANCE(i, j) (MAX (FileDistance (i, j), RankDistance (i, j)))
 
     for ( sq = A1; sq <= H8; sq++ )
         {
@@ -450,10 +526,10 @@ void InitArrays()
 
         for ( i = A1; i <= H8; i++ )
             {
-            if( Distance(sq2, j) < Distance(j, i) - 1 )
+            if( DISTANCE(sq2, j) < DISTANCE(j, i) - 1 )
                 BitSet(i, QuadrantBKbtm[sq]);
 
-            if( Distance(sq2, j) < Distance(j, i) )
+            if( DISTANCE(sq2, j) < DISTANCE(j, i) )
                 BitSet(i, QuadrantBKwtm[sq]);
             }
         }
@@ -470,10 +546,10 @@ void InitArrays()
 
         for ( i = A1; i <= H8; i++ )
             {
-            if( Distance(sq2, j) < Distance(j, i) - 1 )
+            if( DISTANCE(sq2, j) < DISTANCE(j, i) - 1 )
                 BitSet(i, QuadrantWKwtm[sq]);
 
-            if( Distance(sq2, j) < Distance(j, i) )
+            if( DISTANCE(sq2, j) < DISTANCE(j, i) )
                 BitSet(i, QuadrantWKbtm[sq]);
             }
         }
@@ -481,12 +557,12 @@ void InitArrays()
     for ( sq = A1; sq <= H8; sq++ )
         {
         ShepherdWK[sq] = ShepherdBK[sq] = 0;
-        file = FILE(sq);
+        co = FILE(sq);
 
-        if( file == FA || file == FH )
-            T = IsolatedFiles[file];
+        if( co == FA || co == FH )
+            T = IsolatedFiles[co];
         else
-            T = IsolatedFiles[file] | FileArray[file];
+            T = IsolatedFiles[co] | FileArray[co];
 
         if( RANK(sq) >= R6 )
             ShepherdWK[sq] |= (T &RANK8);
@@ -503,72 +579,72 @@ void InitArrays()
 
     for ( sq = A1; sq <= H8; sq++ )
         {
-        NorthWest[sq] = (RANK(sq) != R8 && FILE(sq) != FA) ? SqSet[sq + 7] : 0;
-        NorthEast[sq] = (RANK(sq) != R8 && FILE(sq) != FH) ? SqSet[sq + 9] : 0;
-        SouthWest[sq] = (RANK(sq) != R1 && FILE(sq) != FA) ? SqSet[sq - 9] : 0;
-        SouthEast[sq] = (RANK(sq) != R1 && FILE(sq) != FH) ? SqSet[sq - 7] : 0;
+        NORTHWEST[sq] = (RANK(sq) != R8 && FILE(sq) != FA) ? SqSet[sq + 7] : 0;
+        NORTHEAST[sq] = (RANK(sq) != R8 && FILE(sq) != FH) ? SqSet[sq + 9] : 0;
+        SOUTHWEST[sq] = (RANK(sq) != R1 && FILE(sq) != FA) ? SqSet[sq - 9] : 0;
+        SOUTHEAST[sq] = (RANK(sq) != R1 && FILE(sq) != FH) ? SqSet[sq - 7] : 0;
         }
 
     for ( sq = A1; sq <= H8; sq++ )
         for ( king = A1; king <= H8; king++ )
             {
-            Evade[king][sq] = AttK[king];
+            EVADE[king][sq] = AttK[king];
 
             if( RANK(king) == RANK(sq) )
                 {
                 if( FILE(king) != FA )
-                    Evade[king][sq] ^= SqSet[king - 1];
+                    EVADE[king][sq] ^= SqSet[king - 1];
 
                 if( FILE(king) != FH )
-                    Evade[king][sq] ^= SqSet[king + 1];
+                    EVADE[king][sq] ^= SqSet[king + 1];
                 }
 
             if( FILE(king) == FILE(sq) )
                 {
                 if( RANK(king) != R1 )
-                    Evade[king][sq] ^= SqSet[king - 8];
+                    EVADE[king][sq] ^= SqSet[king - 8];
 
                 if( RANK(king) != R8 )
-                    Evade[king][sq] ^= SqSet[king + 8];
+                    EVADE[king][sq] ^= SqSet[king + 8];
                 }
 
             if( (RANK(king) - RANK(sq)) == (FILE(king) - FILE(sq)) )
                 {
                 if( RANK(king) != R8 && FILE(king) != FH )
-                    Evade[king][sq] ^= SqSet[king + 9];
+                    EVADE[king][sq] ^= SqSet[king + 9];
 
                 if( RANK(king) != R1 && FILE(king) != FA )
-                    Evade[king][sq] ^= SqSet[king - 9];
+                    EVADE[king][sq] ^= SqSet[king - 9];
                 }
 
             if( (RANK(king) - RANK(sq)) == (FILE(sq) - FILE(king)) )
                 {
                 if( RANK(king) != R8 && FILE(king) != FA )
-                    Evade[king][sq] ^= SqSet[king + 7];
+                    EVADE[king][sq] ^= SqSet[king + 7];
 
                 if( RANK(king) != R1 && FILE(king) != FH )
-                    Evade[king][sq] ^= SqSet[king - 7];
+                    EVADE[king][sq] ^= SqSet[king - 7];
                 }
 
             if( AttK[king] & SqSet[sq] )
-                Evade[king][sq] |= SqSet[sq];
+                EVADE[king][sq] |= SqSet[sq];
             }
 
-    for ( file = FA; file <= FH; file++ )
+    for ( co = FA; co <= FH; co++ )
         {
-        FilesLeft[file] = FilesRight[file] = 0;
+        FilesLeft[co] = FilesRight[co] = 0;
 
-        for ( i = FA; i < file; i++ )
-            FilesLeft[file] |= FileArray[i];
+        for ( i = FA; i < co; i++ )
+            FilesLeft[co] |= FileArray[i];
 
-        for ( i = file + 1; i <= FH; i++ )
-            FilesRight[file] |= FileArray[i];
+        for ( i = co + 1; i <= FH; i++ )
+            FilesRight[co] |= FileArray[i];
         }
 
     for ( sq = A1; sq <= H8; sq++ )
         for ( king = A1; king <= H8; king++ )
             {
-            Interpose[king][sq] = SqSet[sq];
+            INTERPOSE[king][sq] = SqSet[sq];
             dir = 0;
 
             if( RANK(king) == RANK(sq) )
@@ -605,51 +681,51 @@ void InitArrays()
 
             if( dir )
                 for ( i = sq; i != king; i += dir )
-                    BitSet(i, Interpose[king][sq]);
+                    BitSet(i, INTERPOSE[king][sq]);
             }
 
     for ( sq = A1; sq <= H8; sq++ )
         {
-        Ortho[sq] = RankArray[RANK(sq)] | FileArray[FILE(sq)];
-        Diag[sq] = 0;
+        ORTHO[sq] = RankArray[RANK(sq)] | FileArray[FILE(sq)];
+        DIAG[sq] = 0;
 
-        for ( file = FILE(sq), rank = RANK(sq); file <= FH && rank <= R8; file++, rank++ )
-            BitSet(8 * rank + file, Diag[sq]);
+        for ( co = FILE(sq), trans = RANK(sq); co <= FH && trans <= R8; co++, trans++ )
+            BitSet(8 * trans + co, DIAG[sq]);
 
-        for ( file = FILE(sq), rank = RANK(sq); file <= FH && rank >= R1; file++, rank-- )
-            BitSet(8 * rank + file, Diag[sq]);
+        for ( co = FILE(sq), trans = RANK(sq); co <= FH && trans >= R1; co++, trans-- )
+            BitSet(8 * trans + co, DIAG[sq]);
 
-        for ( file = FILE(sq), rank = RANK(sq); file >= FA && rank <= R8; file--, rank++ )
-            BitSet(8 * rank + file, Diag[sq]);
+        for ( co = FILE(sq), trans = RANK(sq); co >= FA && trans <= R8; co--, trans++ )
+            BitSet(8 * trans + co, DIAG[sq]);
 
-        for ( file = FILE(sq), rank = RANK(sq); file >= FA && rank >= R1; file--, rank-- )
-            BitSet(8 * rank + file, Diag[sq]);
-        Ortho[sq] &= SqClear[sq];
-        Diag[sq] &= SqClear[sq];
-        NonOrtho[sq] = ~Ortho[sq];
-        NonDiag[sq] = ~Diag[sq];
-        OrthoDiag[sq] = Ortho[sq] | Diag[sq];
+        for ( co = FILE(sq), trans = RANK(sq); co >= FA && trans >= R1; co--, trans-- )
+            BitSet(8 * trans + co, DIAG[sq]);
+        ORTHO[sq] &= SqClear[sq];
+        DIAG[sq] &= SqClear[sq];
+        NON_ORTHO[sq] = ~ORTHO[sq];
+        NON_DIAG[sq] = ~DIAG[sq];
+        ORTHO_DIAG[sq] = ORTHO[sq] | DIAG[sq];
         }
 
     for ( j = A1; j <= H8; j++ )
         for ( i = A1; i <= H8; i++ )
             {
-            Line[i][j] = BadDirection;
+            LINE[i][j] = BAD_DIRECTION;
 
             if( i == j )
                 continue;
 
             if( RANK(j) == RANK(i) )
-                Line[i][j] = Direction_horz;
+                LINE[i][j] = Direction_horz;
 
             if( FILE(j) == FILE(i) )
-                Line[i][j] = Direction_vert;
+                LINE[i][j] = Direction_vert;
 
             if( (FILE(i) - FILE(j)) == (RANK(i) - RANK(j)) )
-                Line[i][j] = Direction_a1h8;
+                LINE[i][j] = Direction_a1h8;
 
             if( (FILE(j) - FILE(i)) == (RANK(i) - RANK(j)) )
-                Line[i][j] = Direction_h1a8;
+                LINE[i][j] = Direction_h1a8;
             }
 
     InitZobrist();

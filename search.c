@@ -1,56 +1,61 @@
 #include "firebird.h"
+#include "control.h"
 #include "null_move.h"
+#include <string.h>
 
-void OutputBestMove( typePos *Position )
+#define LEGAL (POSITION->wtm ? !BLACK_IN_CHECK : !WHITE_IN_CHECK)
+#define IN_CHECK (POSITION->wtm ? WHITE_IN_CHECK: BLACK_IN_CHECK)
+
+void OutputBestMove( typePOS *POSITION )
     {
     int i, k;
-    typePVHash *rank;
-    int PonderMove = MoveNone;
+    typePVHash *trans;
+    int PONDER_MOVE = MOVE_NONE;
 
-    if( !RootBestMove )
+    if( !ROOT_BEST_MOVE )
         {
-        Send("bestmove NULL\n");
+        SEND("bestmove NULL\n");
         return;
         }
-    Make(Position, RootBestMove);
+    Make(POSITION, ROOT_BEST_MOVE);
     EVAL(0);
 
-    k = Position->Current->Hash & PVHashMask;
+    k = POSITION->DYN->HASH & PVHashMask;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = PVHashTable + (k + i);
+        trans = PVHashTable + (k + i);
 
-        if( rank->hash == Position->Current->Hash )
+        if( trans->hash == POSITION->DYN->HASH )
             {
-            PonderMove = rank->move;
+            PONDER_MOVE = trans->move;
             break;
             }
         }
 		
-    if( (Position->wtm ? !WhiteOK(Position, PonderMove) : !BlackOK(Position, PonderMove)) )
-        PonderMove = MoveNone;
+    if( (POSITION->wtm ? !WhiteOK(POSITION, PONDER_MOVE) : !BlackOK(POSITION, PONDER_MOVE)) )
+        PONDER_MOVE = MOVE_NONE;
     else
         {
-        Make(Position, PonderMove);
+        Make(POSITION, PONDER_MOVE);
         EVAL(0);
 
-        if( !Position->wtm ? (wBitboardK &Position->Current->bAtt) : (bBitboardK &Position->Current->wAtt) )
-            PonderMove = MoveNone;
-        Undo(Position, PonderMove);
+        if( !POSITION->wtm ? (wBitboardK &POSITION->DYN->bAtt) : (bBitboardK &POSITION->DYN->wAtt) )
+            PONDER_MOVE = MOVE_NONE;
+        Undo(POSITION, PONDER_MOVE);
         }
 
-    Undo(Position, RootBestMove);
-    Send("bestmove %s ponder %s\n", Notate(RootBestMove, String1), Notate(PonderMove, String2));
+    Undo(POSITION, ROOT_BEST_MOVE);
+    SEND("bestmove %s ponder %s\n", Notate(ROOT_BEST_MOVE, STRING1), Notate(PONDER_MOVE, STRING2));
     }
-static char *Modifier( int Alpha, int Value, int Beta, char *s )
+static char *MODIFIER( int ALPHA, int Value, int BETA, char *s )
     {
     s[0] = 0;
 
-    if( Value <= Alpha )
+    if( Value <= ALPHA )
         strcpy(s, " upperbound");
 
-    else if( Value >= Beta )
+    else if( Value >= BETA )
         strcpy(s, " lowerbound");
 
     else
@@ -59,34 +64,40 @@ static char *Modifier( int Alpha, int Value, int Beta, char *s )
     }
 static char *cp_mate( int Value, char *s )
     {
-    if( Value > ValueMate - MaxPly )
-        sprintf(s, "mate %d", (ValueMate + 1 - Value) / 2);
+    if( Value > VALUE_MATE - MAXIMUM_PLY )
+        sprintf(s, "mate %d", (VALUE_MATE + 1 - Value) / 2);
 
-    else if( Value < -ValueMate + MaxPly )
-        sprintf(s, "mate %d", (-ValueMate - Value) / 2);
+    else if( Value < -VALUE_MATE + MAXIMUM_PLY )
+        sprintf(s, "mate %d", (-VALUE_MATE - Value) / 2);
 
     else
         sprintf(s, "cp %d", Value);
     return s;
     }
-void Information( typePos *Position, sint64 x, int Alpha, int Value, int Beta )
+void Information( typePOS *POSITION, sint64 x, int ALPHA, int Value, int BETA )
     {
-    uint64 t, nps, Nodes = 0;
+    uint64 t, nps, NODES = 0;
     int cpu, rp;
     int sd, k, move;
 
     char pv[256 * 6], *q;
-    typePVHash *rank;
+    typePVHash *trans;
     typeHash *trans2;
     uint64 HashStack[256];
     int i;
     int mpv;
     int cnt = 0;
     boolean B;
- 
-    for ( cpu = 0; cpu < NumThreads; cpu++ )
-        for ( rp = 0; rp < RPperCPU; rp++ )
-            Nodes += RootPosition[cpu][rp].nodes;
+    uint64 TBHITS = 0;
+    DECLARE();
+
+    for ( cpu = 0; cpu < NUM_THREADS; cpu++ )
+        for ( rp = 0; rp < RP_PER_CPU; rp++ )
+            NODES += ROOT_POSITION[cpu][rp].nodes;
+
+    for ( cpu = 0; cpu < NUM_THREADS; cpu++ )
+        for ( rp = 0; rp < RP_PER_CPU; rp++ )
+            TBHITS += ROOT_POSITION[cpu][rp].tbhits;
 
     sd = 0;
     memset(HashStack, 0, 256 * sizeof(uint64));
@@ -95,66 +106,66 @@ void Information( typePos *Position, sint64 x, int Alpha, int Value, int Beta )
     if( t == 0 )
         nps = 0;
     else
-        nps = Nodes / t;
+        nps = NODES / t;
 
-    if( MultiPV == 1 )
-        MPV[0].move = RootBestMove;
+    if( MULTI_PV == 1 )
+        MPV[0].move = ROOT_BEST_MOVE;
 
-    if( MultiPV == 1 )
+    if( MULTI_PV == 1 )
         MPV[0].Value = Value;
 
-    for ( mpv = 0; mpv < MultiPV; mpv++ )
+    for ( mpv = 0; mpv < MULTI_PV; mpv++ )
         {
         move = MPV[mpv].move;
 
-        if( move == MoveNone )
+        if( move == MOVE_NONE )
             break;
 
         q = pv;
         cnt = 0;
-        HashStack[cnt++] = Position->Current->Hash;
-        Notate(move, String1);
-        strcpy(q, String1);
-        q += strlen(String1);
+        HashStack[cnt++] = POSITION->DYN->HASH;
+        Notate(move, STRING1);
+        strcpy(q, STRING1);
+        q += strlen(STRING1);
         strcpy(q, " ");
         q++;
 
         while( move )
             {
-            Make(Position, move);
+            Make(POSITION, move);
             EVAL(0);
             B = false;
 
             for ( i = 0; i < cnt; i++ )
-                if( HashStack[i] == Position->Current->Hash )
+                if( HashStack[i] == POSITION->DYN->HASH )
                     B = true;
 
             if( B )
                 break;
-            HashStack[cnt++] = Position->Current->Hash;
+            HashStack[cnt++] = POSITION->DYN->HASH;
             move = 0;
-            k = Position->Current->Hash & PVHashMask;
+            k = POSITION->DYN->HASH & PVHashMask;
 
             for ( i = 0; i < 4; i++ )
                 {
-                rank = PVHashTable + (k + i);
+                trans = PVHashTable + (k + i);
 
-                if( rank->hash == Position->Current->Hash )
+                if( trans->hash == POSITION->DYN->HASH )
                     {
-                    move = rank->move;
+                    move = trans->move;
                     break;
                     }
                 }
 
             if( !move )
                 {
-                k = Position->Current->Hash & HashMask;
+                k = POSITION->DYN->HASH & HashMask;
 
                 for ( i = 0; i < 4; i++ )
                     {
                     trans2 = HashTable + (k + i);
 
-                    if( trans2->hash == Position->Current->Hash )
+                    if( trans2->hash == POSITION->DYN->HASH )
                         {
                         move = trans2->move;
                         break;
@@ -162,122 +173,139 @@ void Information( typePos *Position, sint64 x, int Alpha, int Value, int Beta )
                     }
                 }
 
-            if( !move || (Position->wtm ? !WhiteOK(Position, move) : !BlackOK(Position, move)) )
+            if( !move || (POSITION->wtm ? !WhiteOK(POSITION, move) : !BlackOK(POSITION, move)) )
                 break;
 
             if( cnt > 250 )
                 break;
-            Notate(move, String1);
-            strcpy(q, String1);
-            q += strlen(String1);
+            Notate(move, STRING1);
+            strcpy(q, STRING1);
+            q += strlen(STRING1);
             strcpy(q, " ");
             q++;
             }
         q--;
         *q = 0;
 
-        while( Position->Current != (Position->Root + 1) )
+        while( POSITION->DYN != (POSITION->DYN_ROOT + 1) )
             {
-            if( !Position->Current->move )
-                UndoNull(Position);
+            if( !POSITION->DYN->move )
+                UndoNull(POSITION);
             else
-                Undo(Position, Position->Current->move);
+                Undo(POSITION, POSITION->DYN->move);
             }
 
-        Send("info multipv %d time %I64u nodes %I64u nps %I64u ", mpv + 1, t, Nodes, nps * 1000);
-        Send("score %s%s depth %d pv %s", cp_mate(MPV[mpv].Value, String2), Modifier(Alpha, MPV[mpv].Value, Beta, String3), RootDepth / 2, pv);
-        Send("\n");
+        SEND("info multipv %d time " TYPE_64_BIT " nodes " TYPE_64_BIT
+            " nps " TYPE_64_BIT, mpv + 1, t, NODES, nps * 1000);
+        if( TBHITS )
+            SEND( " tbhits " TYPE_64_BIT, TBHITS );
+        SEND(" score %s%s depth %d pv %s", cp_mate(MPV[mpv].Value, STRING2),
+            MODIFIER(ALPHA, MPV[mpv].Value, BETA, STRING3), ROOT_DEPTH / 2, pv);
+        if( init_flag && x > 400000 && EXTRA_INFO )
+            {
+            SEND(" cpuload %u",
+                (unsigned)MIN(((double)(ProcessClock() - CPU_TIME) / (double)(x * num_CPUs) * 1000), 1000));
+			init_flag = false;
+            }
+        SEND("\n");
         }
     }
 
-void Search( typePos *Position )
+#include <string.h>
+
+void Search( typePOS *POSITION )
     {
     int z;
-    typePosition *p, *q;
-    typePos *Pos;
-    IsNewGame = false;
-    StartClock = GetClock();
-    PonderHit = false;
-    Position->StackHeight = -1;
-    RootBestMove = RootDepth = RootScore = 0;
+    typeDYNAMIC *p, *q;
+    typePOS *POS;
+    init_flag = true;
+    NEW_GAME = false;
+    timeBeginPeriod(1);
+    START_CLOCK = GetClock();
+    CPU_TIME = ProcessClock();
+    PONDER_HIT = false;
+    POSITION->StackHeight = -1;
+    ROOT_BEST_MOVE = ROOT_DEPTH = ROOT_SCORE = 0;
 
-    for ( p = Position->Root; p <= Position->Current; p++ )
-        Position->Stack[++(Position->StackHeight)] = p->Hash;
-    NodeCheck = 0;
-    RootPosition0->nodes = 0;
+    for ( p = POSITION->DYN_ROOT; p <= POSITION->DYN; p++ )
+        POSITION->STACK[++(POSITION->StackHeight)] = p->HASH;
+    NODE_CHECK = 0;
+    ROOT_POSITION0->nodes = 0;
 
-    if( Analysing )
+    if( ANALYSING )
         {
-        boolean Repetition;
+        boolean REPETITION;
 
-        for ( p = Position->Root; p < Position->Current; p++ )
+        for ( p = POSITION->DYN_ROOT; p < POSITION->DYN; p++ )
             {
-            Repetition = false;
+            REPETITION = false;
 
-            for ( q = p + 2; q < Position->Current; q += 2 )
-                if( p->Hash == q->Hash )
+            for ( q = p + 2; q < POSITION->DYN; q += 2 )
+                if( p->HASH == q->HASH )
                     {
-                    Repetition = true;
+                    REPETITION = true;
                     break;
                     }
 
-            if( !Repetition )
-                Position->Stack[p - Position->Root] = 0;
+            if( !REPETITION )
+                POSITION->STACK[p - POSITION->DYN_ROOT] = 0;
             (p + 1)->move = 0;
             }
         }
-    memcpy(Position->Root + 1, Position->Current, sizeof(typePosition));
-    memset(Position->Root + 2, 0, 254 * sizeof(typePosition));
-    memset(Position->Root, 0, sizeof(typePosition));
-    Position->Current = Position->Root + 1;
-    Position->height = 0;
+    memcpy(POSITION->DYN_ROOT + 1, POSITION->DYN, sizeof(typeDYNAMIC));
+    memset(POSITION->DYN_ROOT + 2, 0, 254 * sizeof(typeDYNAMIC));
+    memset(POSITION->DYN_ROOT, 0, sizeof(typeDYNAMIC));
+    POSITION->DYN = POSITION->DYN_ROOT + 1;
+    POSITION->height = 0;
     IncrementAge();
-    RootPrevious = -ValueMate;
-    EasyMove = false;
-    JumpIsSet = true;
-    Pos = Position;
+    ROOT_PREVIOUS = -VALUE_MATE;
+    EASY_MOVE = false;
+    JUMP_IS_SET = true;
+    POS = POSITION;
+	ROOT_POSITION0->tbhits = 0;
 
-    InitSMP();
-    Pos = &RootPosition[0][0];
+    ivan_init_smp();
+    POS = &ROOT_POSITION[0][0];
 
     z = setjmp(J);
 
     if( !z )
         {
-        if( Pos->wtm )
-            TopWhite(Pos);
+        if( POS->wtm )
+            TopWhite(POS);
         else
-            TopBlack(Pos);
+            TopBlack(POS);
         }
 
-    EndSMP();
+    ivan_end_smp();
 
-    JumpIsSet = false;
-    PreviousDepth = RootDepth;
+    JUMP_IS_SET = false;
+    PREVIOUS_DEPTH = ROOT_DEPTH;
 
-    if( Pos == Position )
+    if( POS == POSITION )
         {
-        while( Pos->Current != (Pos->Root + 1) )
+        while( POS->DYN != (POS->DYN_ROOT + 1) )
             {
-            if( !Pos->Current->move )
-                UndoNull(Pos);
+            if( !POS->DYN->move )
+                UndoNull(POS);
             else
-                Undo(Pos, Pos->Current->move);
+                Undo(POS, POS->DYN->move);
             }
         }
-    Information(Position, GetClock() - StartClock, -32767, RootScore, 32767);
+    Information(POSITION, GetClock() - START_CLOCK, -32767, ROOT_SCORE, 32767);
 
-    if( DoInfinite && !Stop )
+    if( DO_INFINITE && !STOP )
         {
-        while( !Stop )
-            Input(Position);
+        while( !STOP )
+            Input(POSITION);
         }
 
-    if( DoPonder && !Stop && !PonderHit )
+    if( DO_PONDER && !STOP && !PONDER_HIT )
         {
-        while( !Stop && !PonderHit )
-            Input(Position);
+        while( !STOP && !PONDER_HIT )
+            Input(POSITION);
         }
 
-    OutputBestMove(Position);
+    OutputBestMove(POSITION);
+    timeEndPeriod(1);
     }

@@ -1,9 +1,130 @@
 #include "firebird.h"
 #include "pawn_eval.h"
 
+typedef struct
+    {
+    uint64 EDGE, MIDDLE, CENTER;
+    uint8 ShelterEdge[8], ShelterMiddle[8], ShelterCenter[8];
+    uint8 StormEdge[8], StormMiddle[8], StormCenter[8], ShelterDiag[8], ZERO, VALU_ZERO;
+    } typePAWNptr;
+
+typePAWNptr PAWNptr[8];
+
+const uint8 SHELTERaa[8] =
+    {
+    30, 0, 5, 15, 20, 25, 25, 25
+    };
+const uint8 SHELTERab[8] =
+    {
+    55, 0, 15, 40, 50, 55, 55, 55
+    };
+const uint8 SHELTERac[8] =
+    {
+    30, 0, 10, 20, 25, 30, 30, 30
+    };
+const uint8 STORMaa[8] =
+    {
+    5, 0, 35, 15, 5, 0, 0, 0
+    };
+const uint8 STORMab[8] =
+    {
+    10, 0, 50, 20, 10, 0, 0, 0
+    };
+const uint8 STORMac[8] =
+    {
+    10, 0, 50, 20, 10, 0, 0, 0
+    };
+const uint8 SHELTERba[8] =
+    {
+    30, 0, 5, 15, 20, 25, 25, 25
+    };
+const uint8 SHELTERbb[8] =
+    {
+    55, 0, 15, 40, 50, 55, 55, 55
+    };
+const uint8 SHELTERbc[8] =
+    {
+    30, 0, 10, 20, 25, 30, 30, 30
+    };
+const uint8 STORMba[8] =
+    {
+    5, 0, 35, 15, 5, 0, 0, 0
+    };
+const uint8 STORMbb[8] =
+    {
+    10, 0, 50, 20, 10, 0, 0, 0
+    };
+const uint8 STORMbc[8] =
+    {
+    10, 0, 50, 20, 10, 0, 0, 0
+    };
+const uint8 SHELTERcb[8] =
+    {
+    30, 0, 5, 15, 20, 25, 25, 25
+    };
+const uint8 SHELTERcc[8] =
+    {
+    55, 0, 15, 40, 50, 55, 55, 55
+    };
+const uint8 SHELTERcd[8] =
+    {
+    30, 0, 10, 20, 25, 30, 30, 30
+    };
+const uint8 STORMcb[8] =
+    {
+    5, 0, 35, 15, 5, 0, 0, 0
+    };
+const uint8 STORMcc[8] =
+    {
+    10, 0, 50, 20, 10, 0, 0, 0
+    };
+const uint8 STORMcd[8] =
+    {
+    10, 0, 50, 20, 10, 0, 0, 0
+    };
+const uint8 SHELTERdc[8] =
+    {
+    30, 0, 5, 15, 20, 25, 25, 25
+    };
+const uint8 SHELTERdd[8] =
+    {
+    55, 0, 15, 40, 50, 55, 55, 55
+    };
+const uint8 SHELTERde[8] =
+    {
+    30, 0, 10, 20, 25, 30, 30, 30
+    };
+const uint8 STORMdc[8] =
+    {
+    5, 0, 35, 15, 5, 0, 0, 0
+    };
+const uint8 STORMdd[8] =
+    {
+    10, 0, 50, 20, 10, 0, 0, 0
+    };
+const uint8 STORMde[8] =
+    {
+    10, 0, 50, 20, 10, 0, 0, 0
+    };
+const uint8 ShelterLongDiagA[8] =
+    {
+    10, 0, 2, 4, 6, 8, 10, 10
+    };
+const uint8 ShelterLongDiagB[8] =
+    {
+    8, 0, 2, 4, 6, 7, 8, 8
+    };
+const uint8 ShelterLongDiagC[8] =
+    {
+    6, 0, 2, 3, 4, 5, 6, 6
+    };
+const uint8 ShelterLongDiagD[8] =
+    {
+    4, 0, 1, 2, 3, 4, 4, 4
+    };
 void InitPawns()
     {
-    int file, rank;
+    int co, tr;
     int TARGET[8] =
         {
         FB, FB, FC, FD, FE, FF, FG, FG
@@ -14,127 +135,127 @@ void InitPawns()
         1, 1, 1, 1, -1, -1, -1, -1
         };
 
-    for ( file = FA; file <= FH; file++ )
+    for ( co = FA; co <= FH; co++ )
         {
-        PawnPtr[file].Edge = FileArray[TARGET[file] - Switch[file]];
-        PawnPtr[file].Middle = FileArray[TARGET[file]];
-        PawnPtr[file].Center = FileArray[TARGET[file] + Switch[file]];
+        PAWNptr[co].EDGE = FileArray[TARGET[co] - Switch[co]];
+        PAWNptr[co].MIDDLE = FileArray[TARGET[co]];
+        PAWNptr[co].CENTER = FileArray[TARGET[co] + Switch[co]];
         }
 
-    for ( rank = R1; rank <= R8; rank++ )
+    for ( tr = R1; tr <= R8; tr++ )
         {
-        PawnPtr[FA].ShelterEdge[rank] = Shelter_aa[rank];
-        PawnPtr[FA].StormEdge[rank] = Storm_aa[rank];
-        PawnPtr[FA].ShelterMiddle[rank] = Shelter_ab[rank];
-        PawnPtr[FA].StormMiddle[rank] = Storm_ab[rank];
-        PawnPtr[FA].ShelterCenter[rank] = Shelter_ac[rank];
-        PawnPtr[FA].StormCenter[rank] = Storm_ac[rank];
-        PawnPtr[FH].ShelterEdge[rank] = Shelter_aa[rank];
-        PawnPtr[FH].StormEdge[rank] = Storm_aa[rank];
-        PawnPtr[FH].ShelterMiddle[rank] = Shelter_ab[rank];
-        PawnPtr[FH].StormMiddle[rank] = Storm_ab[rank];
-        PawnPtr[FH].ShelterCenter[rank] = Shelter_ac[rank];
-        PawnPtr[FH].StormCenter[rank] = Storm_ac[rank];
-        PawnPtr[FA].ShelterDiag[rank] = ShelterLongDiagA[rank];
-        PawnPtr[FH].ShelterDiag[rank] = ShelterLongDiagA[rank];
+        PAWNptr[FA].ShelterEdge[tr] = SHELTERaa[tr];
+        PAWNptr[FA].StormEdge[tr] = STORMaa[tr];
+        PAWNptr[FA].ShelterMiddle[tr] = SHELTERab[tr];
+        PAWNptr[FA].StormMiddle[tr] = STORMab[tr];
+        PAWNptr[FA].ShelterCenter[tr] = SHELTERac[tr];
+        PAWNptr[FA].StormCenter[tr] = STORMac[tr];
+        PAWNptr[FH].ShelterEdge[tr] = SHELTERaa[tr];
+        PAWNptr[FH].StormEdge[tr] = STORMaa[tr];
+        PAWNptr[FH].ShelterMiddle[tr] = SHELTERab[tr];
+        PAWNptr[FH].StormMiddle[tr] = STORMab[tr];
+        PAWNptr[FH].ShelterCenter[tr] = SHELTERac[tr];
+        PAWNptr[FH].StormCenter[tr] = STORMac[tr];
+        PAWNptr[FA].ShelterDiag[tr] = ShelterLongDiagA[tr];
+        PAWNptr[FH].ShelterDiag[tr] = ShelterLongDiagA[tr];
         }
 
-    for ( rank = R1; rank <= R8; rank++ )
+    for ( tr = R1; tr <= R8; tr++ )
         {
-        PawnPtr[FB].ShelterEdge[rank] = Shelter_ba[rank];
-        PawnPtr[FB].StormEdge[rank] = Storm_ba[rank];
-        PawnPtr[FB].ShelterMiddle[rank] = Shelter_bb[rank];
-        PawnPtr[FB].StormMiddle[rank] = Storm_bb[rank];
-        PawnPtr[FB].ShelterCenter[rank] = Shelter_bc[rank];
-        PawnPtr[FB].StormCenter[rank] = Storm_bc[rank];
-        PawnPtr[FG].ShelterEdge[rank] = Shelter_ba[rank];
-        PawnPtr[FG].StormEdge[rank] = Storm_ba[rank];
-        PawnPtr[FG].ShelterMiddle[rank] = Shelter_bb[rank];
-        PawnPtr[FG].StormMiddle[rank] = Storm_bb[rank];
-        PawnPtr[FG].ShelterCenter[rank] = Shelter_bc[rank];
-        PawnPtr[FG].StormCenter[rank] = Storm_bc[rank];
-        PawnPtr[FB].ShelterDiag[rank] = ShelterLongDiagB[rank];
-        PawnPtr[FG].ShelterDiag[rank] = ShelterLongDiagB[rank];
+        PAWNptr[FB].ShelterEdge[tr] = SHELTERba[tr];
+        PAWNptr[FB].StormEdge[tr] = STORMba[tr];
+        PAWNptr[FB].ShelterMiddle[tr] = SHELTERbb[tr];
+        PAWNptr[FB].StormMiddle[tr] = STORMbb[tr];
+        PAWNptr[FB].ShelterCenter[tr] = SHELTERbc[tr];
+        PAWNptr[FB].StormCenter[tr] = STORMbc[tr];
+        PAWNptr[FG].ShelterEdge[tr] = SHELTERba[tr];
+        PAWNptr[FG].StormEdge[tr] = STORMba[tr];
+        PAWNptr[FG].ShelterMiddle[tr] = SHELTERbb[tr];
+        PAWNptr[FG].StormMiddle[tr] = STORMbb[tr];
+        PAWNptr[FG].ShelterCenter[tr] = SHELTERbc[tr];
+        PAWNptr[FG].StormCenter[tr] = STORMbc[tr];
+        PAWNptr[FB].ShelterDiag[tr] = ShelterLongDiagB[tr];
+        PAWNptr[FG].ShelterDiag[tr] = ShelterLongDiagB[tr];
         }
 
-    for ( rank = R1; rank <= R8; rank++ )
+    for ( tr = R1; tr <= R8; tr++ )
         {
-        PawnPtr[FC].ShelterEdge[rank] = Shelter_cb[rank];
-        PawnPtr[FC].StormEdge[rank] = Storm_cb[rank];
-        PawnPtr[FC].ShelterMiddle[rank] = Shelter_cc[rank];
-        PawnPtr[FC].StormMiddle[rank] = Storm_cc[rank];
-        PawnPtr[FC].ShelterCenter[rank] = Shelter_cd[rank];
-        PawnPtr[FC].StormCenter[rank] = Storm_cd[rank];
-        PawnPtr[FF].ShelterEdge[rank] = Shelter_cb[rank];
-        PawnPtr[FF].StormEdge[rank] = Storm_cb[rank];
-        PawnPtr[FF].ShelterMiddle[rank] = Shelter_cc[rank];
-        PawnPtr[FF].StormMiddle[rank] = Storm_cc[rank];
-        PawnPtr[FF].ShelterCenter[rank] = Shelter_cd[rank];
-        PawnPtr[FF].StormCenter[rank] = Storm_cd[rank];
-        PawnPtr[FC].ShelterDiag[rank] = ShelterLongDiagC[rank];
-        PawnPtr[FF].ShelterDiag[rank] = ShelterLongDiagC[rank];
+        PAWNptr[FC].ShelterEdge[tr] = SHELTERcb[tr];
+        PAWNptr[FC].StormEdge[tr] = STORMcb[tr];
+        PAWNptr[FC].ShelterMiddle[tr] = SHELTERcc[tr];
+        PAWNptr[FC].StormMiddle[tr] = STORMcc[tr];
+        PAWNptr[FC].ShelterCenter[tr] = SHELTERcd[tr];
+        PAWNptr[FC].StormCenter[tr] = STORMcd[tr];
+        PAWNptr[FF].ShelterEdge[tr] = SHELTERcb[tr];
+        PAWNptr[FF].StormEdge[tr] = STORMcb[tr];
+        PAWNptr[FF].ShelterMiddle[tr] = SHELTERcc[tr];
+        PAWNptr[FF].StormMiddle[tr] = STORMcc[tr];
+        PAWNptr[FF].ShelterCenter[tr] = SHELTERcd[tr];
+        PAWNptr[FF].StormCenter[tr] = STORMcd[tr];
+        PAWNptr[FC].ShelterDiag[tr] = ShelterLongDiagC[tr];
+        PAWNptr[FF].ShelterDiag[tr] = ShelterLongDiagC[tr];
         }
 
-    for ( rank = R1; rank <= R8; rank++ )
+    for ( tr = R1; tr <= R8; tr++ )
         {
-        PawnPtr[FD].ShelterEdge[rank] = Shelter_dc[rank];
-        PawnPtr[FD].StormEdge[rank] = Storm_dc[rank];
-        PawnPtr[FD].ShelterMiddle[rank] = Shelter_dd[rank];
-        PawnPtr[FD].StormMiddle[rank] = Storm_dd[rank];
-        PawnPtr[FD].ShelterCenter[rank] = Shelter_de[rank];
-        PawnPtr[FD].StormCenter[rank] = Storm_de[rank];
-        PawnPtr[FE].ShelterEdge[rank] = Shelter_dc[rank];
-        PawnPtr[FE].StormEdge[rank] = Storm_dc[rank];
-        PawnPtr[FE].ShelterMiddle[rank] = Shelter_dd[rank];
-        PawnPtr[FE].StormMiddle[rank] = Storm_dd[rank];
-        PawnPtr[FE].ShelterCenter[rank] = Shelter_de[rank];
-        PawnPtr[FE].StormCenter[rank] = Storm_de[rank];
-        PawnPtr[FD].ShelterDiag[rank] = ShelterLongDiagD[rank];
-        PawnPtr[FE].ShelterDiag[rank] = ShelterLongDiagD[rank];
+        PAWNptr[FD].ShelterEdge[tr] = SHELTERdc[tr];
+        PAWNptr[FD].StormEdge[tr] = STORMdc[tr];
+        PAWNptr[FD].ShelterMiddle[tr] = SHELTERdd[tr];
+        PAWNptr[FD].StormMiddle[tr] = STORMdd[tr];
+        PAWNptr[FD].ShelterCenter[tr] = SHELTERde[tr];
+        PAWNptr[FD].StormCenter[tr] = STORMde[tr];
+        PAWNptr[FE].ShelterEdge[tr] = SHELTERdc[tr];
+        PAWNptr[FE].StormEdge[tr] = STORMdc[tr];
+        PAWNptr[FE].ShelterMiddle[tr] = SHELTERdd[tr];
+        PAWNptr[FE].StormMiddle[tr] = STORMdd[tr];
+        PAWNptr[FE].ShelterCenter[tr] = SHELTERde[tr];
+        PAWNptr[FE].StormCenter[tr] = STORMde[tr];
+        PAWNptr[FD].ShelterDiag[tr] = ShelterLongDiagD[tr];
+        PAWNptr[FE].ShelterDiag[tr] = ShelterLongDiagD[tr];
         }
 
-    for ( file = FA; file <= FH; file++ )
+    for ( co = FA; co <= FH; co++ )
         {
-        PawnPtr[file].ZERO = PawnPtr[file].ShelterEdge[R2] + PawnPtr[file].ShelterMiddle[R2] + PawnPtr[file].ShelterCenter[R2];
-        PawnPtr[file].VALU_ZERO = 10;
+        PAWNptr[co].ZERO = PAWNptr[co].ShelterEdge[R2] + PAWNptr[co].ShelterMiddle[R2] + PAWNptr[co].ShelterCenter[R2];
+        PAWNptr[co].VALU_ZERO = 10;
         }
     }
-static int WhiteKingDanger( typePos *Position, int wKs )
+static int WhiteKingDanger( typePOS *POSITION, int wKs )
     {
-    int e, RankWa, RankWb, RankWc, RankBa, RankBb, RankBc, v, rank = RANK(wKs);
-    uint64 T, A = wBitboardP & NotInFrontB[rank];
-    typePawnPtr Z = PawnPtr[FILE(wKs)];
-    T = A & Z.Edge;
+    int e, RankWa, RankWb, RankWc, RankBa, RankBb, RankBc, v, tr = RANK(wKs);
+    uint64 T, A = wBitboardP & NotInFrontB[tr];
+    typePAWNptr Z = PAWNptr[FILE(wKs)];
+    T = A & Z.EDGE;
     RankWa = LSB(T);
 
     if( !T )
         RankWa = 0;
     RankWa >>= 3;
-    T = A & Z.Middle;
+    T = A & Z.MIDDLE;
     RankWb = LSB(T);
 
     if( !T )
         RankWb = 0;
     RankWb >>= 3;
-    T = A & Z.Center;
+    T = A & Z.CENTER;
     RankWc = LSB(T);
 
     if( !T )
         RankWc = 0;
     RankWc >>= 3;
-    T = bBitboardP & Z.Edge;
+    T = bBitboardP & Z.EDGE;
     RankBa = LSB(T);
 
     if( !T )
         RankBa = 0;
     RankBa >>= 3;
-    T = bBitboardP & Z.Middle;
+    T = bBitboardP & Z.MIDDLE;
     RankBb = LSB(T);
 
     if( !T )
         RankBb = 0;
     RankBb >>= 3;
-    T = bBitboardP & Z.Center;
+    T = bBitboardP & Z.CENTER;
     RankBc = LSB(T);
 
     if( !T )
@@ -144,7 +265,7 @@ static int WhiteKingDanger( typePos *Position, int wKs )
 
     if( v == Z.ZERO )
         v = Z.VALU_ZERO;
-    T = A & LongDiag[wKs];
+    T = A & LONG_DIAG[wKs];
     e = LSB(T);
 
     if( !T )
@@ -168,47 +289,47 @@ static int WhiteKingDanger( typePos *Position, int wKs )
     v += e;
     return v;
     }
-static int BlackKingDanger( typePos *Position, int bKs )
+static int BlackKingDanger( typePOS *POSITION, int bKs )
     {
-    int e, RankWa, RankWb, RankWc, RankBa, RankBb, RankBc, v, rank = RANK(bKs);
-    uint64 T, A = bBitboardP & NotInFrontW[rank];
-    typePawnPtr Z = PawnPtr[FILE(bKs)];
-    T = A & Z.Edge;
+    int e, RankWa, RankWb, RankWc, RankBa, RankBb, RankBc, v, tr = RANK(bKs);
+    uint64 T, A = bBitboardP & NotInFrontW[tr];
+    typePAWNptr Z = PAWNptr[FILE(bKs)];
+    T = A & Z.EDGE;
     RankBa = MSB(T);
 
     if( !T )
         RankBa = 56;
     RankBa >>= 3;
     RankBa = 7 - RankBa;
-    T = A & Z.Middle;
+    T = A & Z.MIDDLE;
     RankBb = MSB(T);
 
     if( !T )
         RankBb = 56;
     RankBb >>= 3;
     RankBb = 7 - RankBb;
-    T = A & Z.Center;
+    T = A & Z.CENTER;
     RankBc = MSB(T);
 
     if( !T )
         RankBc = 56;
     RankBc >>= 3;
     RankBc = 7 - RankBc;
-    T = wBitboardP & Z.Edge;
+    T = wBitboardP & Z.EDGE;
     RankWa = MSB(T);
 
     if( !T )
         RankWa = 56;
     RankWa >>= 3;
     RankWa = 7 - RankWa;
-    T = wBitboardP & Z.Middle;
+    T = wBitboardP & Z.MIDDLE;
     RankWb = MSB(T);
 
     if( !T )
         RankWb = 56;
     RankWb >>= 3;
     RankWb = 7 - RankWb;
-    T = wBitboardP & Z.Center;
+    T = wBitboardP & Z.CENTER;
     RankWc = MSB(T);
 
     if( !T )
@@ -219,7 +340,7 @@ static int BlackKingDanger( typePos *Position, int bKs )
 
     if( v == Z.ZERO )
         v = Z.VALU_ZERO;
-    T = A & LongDiag[bKs];
+    T = A & LONG_DIAG[bKs];
     e = MSB(T);
 
     if( !T )
@@ -245,13 +366,13 @@ static int BlackKingDanger( typePos *Position, int bKs )
     return v;
     }
 
-void PawnEval( typePos *Position, typePawnEval *RESULT )
+void PawnEval( typePOS *POSITION, typePawnEval *RESULT )
     {
     int c, Value = 0, B, DistanceWhiteKing, DistanceBlackKing, BestWhiteKingDistance, BestBlackKingDistance;
-    int wKs = Position->wKsq, bKs = Position->bKsq;
-    int b, rank, file, v, ValuePassedPawn;
+    int wKs = POSITION->wKsq, bKs = POSITION->bKsq;
+    int b, tr, co, v, ValuePassedPawn;
     uint64 T, U, V, CONNECTED;
-    typePawnEval *Ptr;
+    typePawnEval *ptr;
 
     RESULT->wPlight = RESULT->bPlight = RESULT->wPdark = RESULT->bPdark = 0;
     RESULT->wKdanger = RESULT->bKdanger = 0;
@@ -261,9 +382,9 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
 
     c = 0;
 
-    for ( file = FA; file <= FH; file++ )
+    for ( co = FA; co <= FH; co++ )
         {
-        if( (wBitboardP &FileArray[file]) == 0 )
+        if( (wBitboardP &FileArray[co]) == 0 )
             c = 0;
         else
             {
@@ -281,8 +402,8 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
         {
         b = LSB(T);
         BitClear(b, T);
-        rank = RANK(b);
-        file = FILE(b);
+        tr = RANK(b);
+        co = FILE(b);
 
         DistanceWhiteKing = WhiteKingPawnDistance(b, wKs);
 
@@ -293,39 +414,39 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
         if( DistanceBlackKing < BestBlackKingDistance )
             BestBlackKingDistance = DistanceBlackKing;
 
-        if( SqSet[b] & White )
+        if( SqSet[b] & LIGHT )
             {
             RESULT->wPlight += BlockedPawnValue[b];
 
-            if( Position->sq[b + 8] == bEnumP )
+            if( POSITION->sq[b + 8] == bEnumP )
                 RESULT->wPlight += BlockedPawnValue[b];
             }
         else
             {
             RESULT->wPdark += BlockedPawnValue[b];
 
-            if( Position->sq[b + 8] == bEnumP )
+            if( POSITION->sq[b + 8] == bEnumP )
                 RESULT->wPdark += BlockedPawnValue[b];
             }
 
-        if( wBitboardP & Left2[b] && (wBitboardP &InFrontW[rank - 1]&FileArray[file - 1]) == 0 )
+        if( wBitboardP & LEFT2[b] && (wBitboardP &InFrontW[tr - 1]&FileArray[co - 1]) == 0 )
             {
             Value -= Hole;
             }
 
         if( (wBitboardP | bBitboardP) & OpenFileW[b] )
             {
-            if( wBitboardP & Doubled[b] )
+            if( wBitboardP & DOUBLED[b] )
                 {
                 Value -= DoubledClosed;
 
-                if( (wBitboardP &IsolatedFiles[file]) == 0 )
+                if( (wBitboardP &IsolatedFiles[co]) == 0 )
                     {
                     Value -= DoubledClosedIsolated;
                     }
                 }
 
-            if( (wBitboardP &IsolatedFiles[file]) == 0 )
+            if( (wBitboardP &IsolatedFiles[co]) == 0 )
                 {
                 Value -= IsolatedClosed;
                 continue;
@@ -351,17 +472,17 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
             continue;
             }
 
-        if( wBitboardP & Doubled[b] )
+        if( wBitboardP & DOUBLED[b] )
             {
             Value -= DoubledOpen;
 
-            if( (wBitboardP &IsolatedFiles[file]) == 0 )
+            if( (wBitboardP &IsolatedFiles[co]) == 0 )
                 {
                 Value -= DoubledOpenIsolated;
                 }
             }
 
-        if( (wBitboardP &IsolatedFiles[file]) == 0 )
+        if( (wBitboardP &IsolatedFiles[co]) == 0 )
             {
             Value -= IsolatedOpen;
             }
@@ -391,37 +512,37 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
 
         if( bBitboardP & PassedPawnW[b] & ~AttPb[b] )
             {
-            Value += CandidatePawnValue[rank];
+            Value += CandidatePawnValue[tr];
             continue;
             }
 
         if( POPCNT(AttPb[b] & bBitboardP) > POPCNT(AttPw[b] & wBitboardP) )
             {
-            Value += CandidatePawnValue[rank];
+            Value += CandidatePawnValue[tr];
             continue;
             }
         PassedW:
-        ValuePassedPawn = PassedPawnValue[rank];
+        ValuePassedPawn = PassedPawnValue[tr];
 
         if( wBitboardP & AttPw[b] )
-            ValuePassedPawn += ProtectedPassedPawnValue[rank];
+            ValuePassedPawn += ProtectedPassedPawnValue[tr];
 
-        if( (bBitboardP &FilesLeft[file]) == 0 || (bBitboardP &FilesRight[file]) == 0 )
-            ValuePassedPawn += OutsidePassedPawnValue[rank];
+        if( (bBitboardP &FilesLeft[co]) == 0 || (bBitboardP &FilesRight[co]) == 0 )
+            ValuePassedPawn += OutsidePassedPawnValue[tr];
 
         V = ConnectedPawns[b] & CONNECTED;
         CONNECTED |= SqSet[b];
 
         if( V )
             {
-            ValuePassedPawn += ConnectedPassedPawnValue[rank] + ConnectedPassedPawnValue[RANK(LSB(V))];
+            ValuePassedPawn += ConnectedPassedPawnValue[tr] + ConnectedPassedPawnValue[RANK(LSB(V))];
             BitClear(0, V);
 
             if( V )
-                ValuePassedPawn += ConnectedPassedPawnValue[rank] + ConnectedPassedPawnValue[RANK(LSB(V))];
+                ValuePassedPawn += ConnectedPassedPawnValue[tr] + ConnectedPassedPawnValue[RANK(LSB(V))];
             }
         Value += ValuePassedPawn;
-        RESULT->wPassedFiles |= (uint8)(1 << file);
+        RESULT->wPassedFiles |= (uint8)(1 << co);
 
         if( b <= H3 )
             {
@@ -433,9 +554,9 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
 
     c = 0;
 
-    for ( file = FA; file <= FH; file++ )
+    for ( co = FA; co <= FH; co++ )
         {
-        if( (bBitboardP &FileArray[file]) == 0 )
+        if( (bBitboardP &FileArray[co]) == 0 )
             c = 0;
         else
             {
@@ -454,8 +575,8 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
         {
         b = LSB(T);
         BitClear(b, T);
-        rank = RANK(b);
-        file = FILE(b);
+        tr = RANK(b);
+        co = FILE(b);
 
         DistanceBlackKing = BlackKingPawnDistance(b, bKs);
 
@@ -466,39 +587,39 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
         if( DistanceWhiteKing < BestWhiteKingDistance )
             BestWhiteKingDistance = DistanceWhiteKing;
 
-        if( SqSet[b] & White )
+        if( SqSet[b] & LIGHT )
             {
             RESULT->bPlight += BlockedPawnValue[b];
 
-            if( Position->sq[b - 8] == wEnumP )
+            if( POSITION->sq[b - 8] == wEnumP )
                 RESULT->bPlight += BlockedPawnValue[b];
             }
         else
             {
             RESULT->bPdark += BlockedPawnValue[b];
 
-            if( Position->sq[b - 8] == wEnumP )
+            if( POSITION->sq[b - 8] == wEnumP )
                 RESULT->bPdark += BlockedPawnValue[b];
             }
 
-        if( bBitboardP & Left2[b] && (bBitboardP &InFrontB[rank + 1]&FileArray[file - 1]) == 0 )
+        if( bBitboardP & LEFT2[b] && (bBitboardP &InFrontB[tr + 1]&FileArray[co - 1]) == 0 )
             {
             Value += Hole;
             }
 
         if( (wBitboardP | bBitboardP) & OpenFileB[b] )
             {
-            if( bBitboardP & Doubled[b] )
+            if( bBitboardP & DOUBLED[b] )
                 {
                 Value += DoubledClosed;
 
-                if( (bBitboardP &IsolatedFiles[file]) == 0 )
+                if( (bBitboardP &IsolatedFiles[co]) == 0 )
                     {
                     Value += DoubledClosedIsolated;
                     }
                 }
 
-            if( (bBitboardP &IsolatedFiles[file]) == 0 )
+            if( (bBitboardP &IsolatedFiles[co]) == 0 )
                 {
                 Value += IsolatedClosed;
                 continue;
@@ -524,17 +645,17 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
             continue;
             }
 
-        if( bBitboardP & Doubled[b] )
+        if( bBitboardP & DOUBLED[b] )
             {
             Value += DoubledOpen;
 
-            if( (bBitboardP &IsolatedFiles[file]) == 0 )
+            if( (bBitboardP &IsolatedFiles[co]) == 0 )
                 {
                 Value += DoubledOpenIsolated;
                 }
             }
 
-        if( (bBitboardP &IsolatedFiles[file]) == 0 )
+        if( (bBitboardP &IsolatedFiles[co]) == 0 )
             {
             Value += IsolatedOpen;
             }
@@ -564,38 +685,38 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
 
         if( wBitboardP & PassedPawnB[b] & ~AttPw[b] )
             {
-            Value -= CandidatePawnValue[7 - rank];
+            Value -= CandidatePawnValue[7 - tr];
             continue;
             }
 
         if( POPCNT(AttPw[b] & wBitboardP) > POPCNT(AttPb[b] & bBitboardP) )
             {
-            Value -= CandidatePawnValue[7 - rank];
+            Value -= CandidatePawnValue[7 - tr];
             continue;
             }
         PassedB:
-        ValuePassedPawn = PassedPawnValue[7 - rank];
+        ValuePassedPawn = PassedPawnValue[7 - tr];
 
         if( bBitboardP & AttPb[b] )
-            ValuePassedPawn += ProtectedPassedPawnValue[7 - rank];
+            ValuePassedPawn += ProtectedPassedPawnValue[7 - tr];
 
-        if( (wBitboardP &FilesLeft[file]) == 0 || (wBitboardP &FilesRight[file]) == 0 )
-            ValuePassedPawn += OutsidePassedPawnValue[7 - rank];
+        if( (wBitboardP &FilesLeft[co]) == 0 || (wBitboardP &FilesRight[co]) == 0 )
+            ValuePassedPawn += OutsidePassedPawnValue[7 - tr];
 
         V = ConnectedPawns[b] & CONNECTED;
         CONNECTED |= SqSet[b];
 
         if( V )
             {
-            ValuePassedPawn += ConnectedPassedPawnValue[7 - rank] + ConnectedPassedPawnValue[7 - (LSB(V) >> 3)];
+            ValuePassedPawn += ConnectedPassedPawnValue[7 - tr] + ConnectedPassedPawnValue[7 - (LSB(V) >> 3)];
             BitClear(0, V);
 
             if( V )
-                ValuePassedPawn += ConnectedPassedPawnValue[7 - rank] + ConnectedPassedPawnValue[7 - (LSB(V) >> 3)];
+                ValuePassedPawn += ConnectedPassedPawnValue[7 - tr] + ConnectedPassedPawnValue[7 - (LSB(V) >> 3)];
             }
 
         Value -= ValuePassedPawn;
-        RESULT->bPassedFiles |= (uint8)(1 << file);
+        RESULT->bPassedFiles |= (uint8)(1 << co);
 
         if( b >= A6 )
             {
@@ -607,12 +728,12 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
 
     T = 0;
 
-    for ( rank = R2; rank <= R7; rank++ )
-        T |= ((wBitboardP >> (8 * rank)) & 0xff);
+    for ( tr = R2; tr <= R7; tr++ )
+        T |= ((wBitboardP >> (8 * tr)) & 0xff);
     U = 0;
 
-    for ( rank = R2; rank <= R7; rank++ )
-        U |= ((bBitboardP >> (8 * rank)) & 0xff);
+    for ( tr = R2; tr <= R7; tr++ )
+        U |= ((bBitboardP >> (8 * tr)) & 0xff);
     RESULT->wPfile_count = POPCNT(T);
     RESULT->bPfile_count = POPCNT(U);
     RESULT->OpenFileCount = 8 - POPCNT(T | U);
@@ -624,68 +745,68 @@ void PawnEval( typePos *Position, typePawnEval *RESULT )
         Value += BestBlackKingDistance - BestWhiteKingDistance;
         }
 
-    T = ((bBitboardP &( ~FileA)) >> 9) | ((bBitboardP &( ~FileH)) >> 7);
+    T = ((bBitboardP &( ~FILEa)) >> 9) | ((bBitboardP &( ~FILEh)) >> 7);
 
     if( ( ~T) &AttK[wKs] & bBitboardP )
         {
         Value += KingAttPawn;
         }
 
-    if( Position->Current->oo & 1 )
+    if( POSITION->DYN->oo & 1 )
         {
         Value += KingOO;
         }
 
-    if( Position->Current->oo & 2 )
+    if( POSITION->DYN->oo & 2 )
         {
         Value += KingOOO;
         }
 
-    T = ((wBitboardP &( ~FileA)) << 7) | ((wBitboardP &( ~FileH)) << 9);
+    T = ((wBitboardP &( ~FILEa)) << 7) | ((wBitboardP &( ~FILEh)) << 9);
 
     if( ( ~T) &AttK[bKs] & wBitboardP )
         {
         Value -= KingAttPawn;
         }
 
-    if( Position->Current->oo & 4 )
+    if( POSITION->DYN->oo & 4 )
         {
         Value -= KingOO;
         }
 
-    if( Position->Current->oo & 8 )
+    if( POSITION->DYN->oo & 8 )
         {
         Value -= KingOOO;
         }
 
-    RESULT->score = Value;
-    v = WhiteKingDanger(Position, wKs);
+    RESULT->SCORE = Value;
+    v = WhiteKingDanger(POSITION, wKs);
 
     if( WhiteOO )
-        v = MIN(v, 5 + WhiteKingDanger(Position, G1));
+        v = MIN(v, 5 + WhiteKingDanger(POSITION, G1));
 
     if( WhiteOOO )
-        v = MIN(v, 5 + WhiteKingDanger(Position, C1));
-    RESULT->wKdanger = Score(v, 0);
-    v = BlackKingDanger(Position, bKs);
+        v = MIN(v, 5 + WhiteKingDanger(POSITION, C1));
+    RESULT->wKdanger = SCORE(v, 0);
+    v = BlackKingDanger(POSITION, bKs);
 
     if( BlackOO )
-        v = MIN(v, 5 + BlackKingDanger(Position, G8));
+        v = MIN(v, 5 + BlackKingDanger(POSITION, G8));
 
     if( BlackOOO )
-        v = MIN(v, 5 + BlackKingDanger(Position, C8));
-    RESULT->bKdanger = Score(v, 0);
-    RESULT->PawnHash = Position->Current->PawnHash;
-    RESULT->PawnHash ^= (((uint64 *)(RESULT)) + 0x1)[0];
-    RESULT->PawnHash ^= (((uint64 *)(RESULT)) + 0x2)[0];
-    RESULT->PawnHash ^= (((uint64 *)(RESULT)) + 0x3)[0];
+        v = MIN(v, 5 + BlackKingDanger(POSITION, C8));
+    RESULT->bKdanger = SCORE(v, 0);
+    RESULT->PAWN_HASH = POSITION->DYN->PAWN_HASH;
+    RESULT->PAWN_HASH ^= (((uint64 *)(RESULT)) + 0x1)[0];
+    RESULT->PAWN_HASH ^= (((uint64 *)(RESULT)) + 0x2)[0];
+    RESULT->PAWN_HASH ^= (((uint64 *)(RESULT)) + 0x3)[0];
 
-    Ptr = PawnHash + (Position->Current->PawnHash &(PawnHashSize - 1));
-    memcpy(Ptr, RESULT, sizeof(typePawnEval));
+    ptr = PawnHash + (POSITION->DYN->PAWN_HASH &(PawnHashSize - 1));
+    memcpy(ptr, RESULT, sizeof(typePawnEval));
 
-    RESULT->PawnHash ^= (((uint64 *)(RESULT)) + 0x1)[0];
-    RESULT->PawnHash ^= (((uint64 *)(RESULT)) + 0x2)[0];
-    RESULT->PawnHash ^= (((uint64 *)(RESULT)) + 0x3)[0];
+    RESULT->PAWN_HASH ^= (((uint64 *)(RESULT)) + 0x1)[0];
+    RESULT->PAWN_HASH ^= (((uint64 *)(RESULT)) + 0x2)[0];
+    RESULT->PAWN_HASH ^= (((uint64 *)(RESULT)) + 0x3)[0];
 
     return;
     }

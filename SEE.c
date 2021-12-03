@@ -2,10 +2,19 @@
 #define BUILD_SEE
 #include "firebird.h"
 
-static int Value[16] =
+typedef enum
     {
-    0, 100, 300, 12345678, 310, 310, 500, 950,
-    0, 100, 300, 12345678, 310, 310, 500, 950
+    ValueP = 100,
+    ValueN = 325,
+    ValueB = 325,
+    ValueR = 500,
+    ValueQ = 975,
+    ValueKing = 12345
+    } EnumValues;
+static const int Value[16] =
+    {
+    0, ValueP, ValueN, 12345678, ValueB, ValueB, ValueR, ValueQ,
+	0, ValueP, ValueN, 12345678, ValueB, ValueB, ValueR, ValueQ
     };
 
 #include "SEE.c"
@@ -14,14 +23,14 @@ static int Value[16] =
 #include "black.h"
 #endif
 
-boolean MySEE( typePos *Position, uint32 move )
+boolean MySEE( typePOS *POSITION, uint32 move )
     {
     int fr, to, PieceValue, CaptureValue, d, dir;
     uint64 bit, cbf, mask, TableIndex[4], gcm = 0, T;
     int SlideIndex[4], b, w;
-    T = MyXray & OppOccupied;
-    fr = From(move);
-    to = To(move);
+    T = MyXRAY & OppOccupied;
+    fr = FROM(move);
+    to = TO(move);
 
     while( T )
         {
@@ -29,32 +38,32 @@ boolean MySEE( typePos *Position, uint32 move )
         w = MyXrayTable[b];
         BitClear(b, T);
 
-        if( fr != w && Line[to][b] != Line[b][OppKingSq] )
+        if( fr != w && LINE[to][b] != LINE[b][OppKingSq] )
             gcm |= SqSet[b];
         }
     gcm = ~gcm;
-    PieceValue = Value[Position->sq[fr]];
-    CaptureValue = Value[Position->sq[to]];
+    PieceValue = Value[POSITION->sq[fr]];
+    CaptureValue = Value[POSITION->sq[to]];
 
-    if( PieceValue - CaptureValue > PValue && OppAttackedPawns[to] & BitboardOppP & gcm )
+    if( PieceValue - CaptureValue > ValueP && OppAttackedPawns[to] & BitboardOppP & gcm )
         return false;
     bit = (BitboardMyN | (BitboardOppN &gcm)) & AttN[to];
     d = PieceValue - CaptureValue;
 
-    if( d > NValue && BitboardOppN & bit )
+    if( d > ValueN && BitboardOppN & bit )
         return false;
-    SlideIndex[Direction_h1a8] = (Position->OccupiedL45 >> LineShift[Direction_h1a8][to]) & 077;
-    SlideIndex[Direction_a1h8] = (Position->OccupiedR45 >> LineShift[Direction_a1h8][to]) & 077;
+    SlideIndex[Direction_h1a8] = (POSITION->OccupiedL45 >> LineShift[Direction_h1a8][to]) & 077;
+    SlideIndex[Direction_a1h8] = (POSITION->OccupiedR45 >> LineShift[Direction_a1h8][to]) & 077;
     mask = BitboardMyQ | BitboardMyB | ((BitboardOppQ | BitboardOppB) & gcm);
     TableIndex[Direction_h1a8] = TableIndex[Direction_a1h8] = mask;
     bit |=
         (LineMask[Direction_h1a8][to][SlideIndex[Direction_h1a8]]
             | LineMask[Direction_a1h8][to][SlideIndex[Direction_a1h8]]) & mask;
 
-    if( d > BValue && (BitboardOppB &bit) )
+    if( d > ValueB && (BitboardOppB &bit) )
         return false;
-    SlideIndex[Direction_horz] = (Position->OccupiedBW >> LineShift[Direction_horz][to]) & 077;
-    SlideIndex[Direction_vert] = (Position->OccupiedL90 >> LineShift[Direction_vert][to]) & 077;
+    SlideIndex[Direction_horz] = (POSITION->OccupiedBW >> LineShift[Direction_horz][to]) & 077;
+    SlideIndex[Direction_vert] = (POSITION->OccupiedL90 >> LineShift[Direction_vert][to]) & 077;
     mask = BitboardMyQ | BitboardMyR | ((BitboardOppQ | BitboardOppR) & gcm);
     TableIndex[Direction_horz] = TableIndex[Direction_vert] = mask;
     bit |=
@@ -65,9 +74,9 @@ boolean MySEE( typePos *Position, uint32 move )
     bit |= BitboardMyP & MyAttackedPawns[to];
     cbf = ~(SqSet[fr] | SqSet[to]);
     bit &= cbf;
-    dir = Line[fr][to];
+    dir = LINE[fr][to];
 
-    if( dir != BadDirection )
+    if( dir != BAD_DIRECTION )
         bit |= LineMask[dir][fr][SlideIndex[dir]] & TableIndex[dir] & cbf;
     CaptureValue -= PieceValue;
 
@@ -79,7 +88,7 @@ boolean MySEE( typePos *Position, uint32 move )
         if( mask )
             {
             bit ^= (~(mask - 1)) & mask;
-            PieceValue = PValue;
+            PieceValue = ValueP;
             }
         else
             {
@@ -88,7 +97,7 @@ boolean MySEE( typePos *Position, uint32 move )
             if( mask )
                 {
                 bit ^= (~(mask - 1)) & mask;
-                PieceValue = NValue;
+                PieceValue = ValueN;
                 }
             else
                 {
@@ -96,9 +105,9 @@ boolean MySEE( typePos *Position, uint32 move )
 
                 if( mask )
                     {
-                    PieceValue = BValue;
+                    PieceValue = ValueB;
                     fr = LSB(mask);
-                    dir = Line[fr][to];
+                    dir = LINE[fr][to];
                     mask = LineMask[dir][fr][SlideIndex[dir]] & cbf & TableIndex[Direction_a1h8];
                     bit = mask | (SqClear[fr]&bit);
                     }
@@ -108,9 +117,9 @@ boolean MySEE( typePos *Position, uint32 move )
 
                     if( mask )
                         {
-                        PieceValue = RValue;
+                        PieceValue = ValueR;
                         fr = LSB(mask);
-                        dir = Line[fr][to];
+                        dir = LINE[fr][to];
                         mask = LineMask[dir][fr][SlideIndex[dir]] & cbf & TableIndex[Direction_horz];
                         bit = mask | (SqClear[fr]&bit);
                         }
@@ -120,9 +129,9 @@ boolean MySEE( typePos *Position, uint32 move )
 
                         if( mask )
                             {
-                            PieceValue = QValue;
+                            PieceValue = ValueQ;
                             fr = LSB(mask);
-                            dir = Line[fr][to];
+                            dir = LINE[fr][to];
                             mask = LineMask[dir][fr][SlideIndex[dir]] & cbf & TableIndex[dir];
                             bit = mask | (SqClear[fr]&bit);
                             }
@@ -145,7 +154,7 @@ boolean MySEE( typePos *Position, uint32 move )
         if( mask )
             {
             bit ^= (~(mask - 1)) & mask;
-            PieceValue = PValue;
+            PieceValue = ValueP;
             }
         else
             {
@@ -154,7 +163,7 @@ boolean MySEE( typePos *Position, uint32 move )
             if( mask )
                 {
                 bit ^= (~(mask - 1)) & mask;
-                PieceValue = NValue;
+                PieceValue = ValueN;
                 }
             else
                 {
@@ -162,9 +171,9 @@ boolean MySEE( typePos *Position, uint32 move )
 
                 if( mask )
                     {
-                    PieceValue = BValue;
+                    PieceValue = ValueB;
                     fr = LSB(mask);
-                    dir = Line[fr][to];
+                    dir = LINE[fr][to];
                     mask = LineMask[dir][fr][SlideIndex[dir]] & cbf & TableIndex[Direction_a1h8];
                     bit = mask | (SqClear[fr]&bit);
                     }
@@ -174,9 +183,9 @@ boolean MySEE( typePos *Position, uint32 move )
 
                     if( mask )
                         {
-                        PieceValue = RValue;
+                        PieceValue = ValueR;
                         fr = LSB(mask);
-                        dir = Line[fr][to];
+                        dir = LINE[fr][to];
                         mask = LineMask[dir][fr][SlideIndex[dir]] & cbf & TableIndex[Direction_horz];
                         bit = mask | (SqClear[fr]&bit);
                         }
@@ -186,9 +195,9 @@ boolean MySEE( typePos *Position, uint32 move )
 
                         if( mask )
                             {
-                            PieceValue = QValue;
+                            PieceValue = ValueQ;
                             fr = LSB(mask);
-                            dir = Line[fr][to];
+                            dir = LINE[fr][to];
                             mask = LineMask[dir][fr][SlideIndex[dir]] & cbf & TableIndex[dir];
                             bit = mask | (SqClear[fr]&bit);
                             }

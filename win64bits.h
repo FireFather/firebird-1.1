@@ -21,3 +21,5 @@ static __inline int POPCNT( UINT64 w )
     }
 #endif
 
+#define BitClear(b, B) B &= (B - 1)
+#define BitSet(b, B) B |= ((uint64) (1)) << (b)

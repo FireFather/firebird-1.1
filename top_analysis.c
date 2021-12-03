@@ -1,95 +1,97 @@
 #ifndef BUILD_top_analysis
 #define BUILD_top_analysis
 #include "firebird.h"
+#include "control.h"
 #define IsCheck   \
- (Position->wtm ? \
-   (wBitboardK & Position->Current->bAtt) : (bBitboardK & Position->Current->wAtt))
+ (POSITION->wtm ? \
+   (wBitboardK & POSITION->DYN->bAtt) : (bBitboardK & POSITION->DYN->wAtt))
 
-typeRootMoveList RootMoveList[512];
+typeRootMoveList ROOT_MOVE_LIST[512];
 #include "top_analysis.c"
 #include "white.h"
 #else
 #include "black.h"
 #endif
 
-void MyTopAnalysis( typePos *Position )
+void MyTopAnalysis( typePOS *POSITION )
     {
     int i, k, depth, A, L, U, v, Value = 0, trans_depth;
     int move_depth = 0, EXACT_DEPTH = 0;
     int sm;
-    uint32 move, Hash_MOVE = 0, EXACT_MOVE = 0, to, fr;
+    uint32 move, HASH_MOVE = 0, EXACT_MOVE = 0, to, fr;
     typeMoveList *mlx, *ml, ML[512];
     typeRootMoveList *p, *q, *list;
-    typeHash *rank;
-    typePosition *TempPosition = Position->Current;
+    typeHash *trans;
+    typeDYNAMIC *POS0 = POSITION->DYN;
     int PieceValue[16] =
         {
         0, 1, 3, 0, 3, 3, 5, 9, 0, 1, 3, 0, 3, 3, 5, 9
         };
     sm = 0;
+    DECLARE();
 
     EVAL(0);
 
     if( IsCheck )
-        ml = MyEvasion(Position, ML, 0xffffffffffffffff);
+        ml = MyEvasion(POSITION, ML, 0xffffffffffffffff);
     else
         {
-        mlx = MyCapture(Position, ML, OppOccupied);
-        ml = MyOrdinary(Position, mlx);
+        mlx = MyCapture(POSITION, ML, OppOccupied);
+        ml = MyOrdinary(POSITION, mlx);
         SortOrdinary(ml, mlx, 0, 0, 0);
         }
 
-    k = Position->Current->Hash & HashMask;
+    k = POSITION->DYN->HASH & HashMask;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( (rank->hash ^ (Position->Current->Hash >> 32)) == 0 )
+        if( (trans->hash ^ (POSITION->DYN->HASH >> 32)) == 0 )
             {
-            trans_depth = rank->DepthLower;
-            move = rank->move;
+            trans_depth = trans->DepthLower;
+            move = trans->move;
 
-            if( IsExact(rank) )
+            if( IsExact(trans) )
                 {
                 EXACT_DEPTH = trans_depth;
                 EXACT_MOVE = move;
-                Value = HashUpperBound(rank);
+                Value = HashUpperBound(trans);
                 }
 
             if( move && trans_depth > move_depth )
                 {
                 move_depth = trans_depth;
-                Hash_MOVE = move;
+                HASH_MOVE = move;
                 }
             }
         }
 
     for ( i = 0; i < ml - ML; i++ )
-        RootMoveList[i].move = ML[i].move;
-    RootMoveList[ml - ML].move = MoveNone;
-    list = RootMoveList + (ml - ML);
-    q = RootMoveList;
+        ROOT_MOVE_LIST[i].move = ML[i].move;
+    ROOT_MOVE_LIST[ml - ML].move = MOVE_NONE;
+    list = ROOT_MOVE_LIST + (ml - ML);
+    q = ROOT_MOVE_LIST;
 
-    for ( p = RootMoveList; p < list; p++ )
+    for ( p = ROOT_MOVE_LIST; p < list; p++ )
         {
         move = p->move & 0x7fff;
-        Make(Position, move);
+        MAKE(POSITION, move);
         EVAL(0);
 
-        if( IllegalMove )
+        if( ILLEGAL_MOVE )
             {
-            Undo(Position, move);
+            UNDO(POSITION, move);
             continue;
             }
 
-        if( Analysing && DoSearchMoves )
+        if( ANALYSING && DO_SEARCH_MOVES )
             {
             sm = 0;
 
-            while( SearchMoves[sm] )
+            while( SEARCH_MOVES[sm] )
                 {
-                if( SearchMoves[sm] == move )
+                if( SEARCH_MOVES[sm] == move )
                     {
                     (q++)->move = move & 0x7fff;
                     break;
@@ -99,26 +101,26 @@ void MyTopAnalysis( typePos *Position )
             }
         else
             (q++)->move = move & 0x7fff;
-        Undo(Position, move);
+        UNDO(POSITION, move);
         }
     q->move = 0;
     list = q;
 
-    for ( p = RootMoveList; p < list; p++ )
+    for ( p = ROOT_MOVE_LIST; p < list; p++ )
         {
-        if( Position->sq[To(p->move)] )
+        if( POSITION->sq[TO(p->move)] )
             {
-            to = Position->sq[To(p->move)];
-            fr = Position->sq[From(p->move)];
+            to = POSITION->sq[TO(p->move)];
+            fr = POSITION->sq[FROM(p->move)];
             p->move |= 0xff000000 + ((16 * PieceValue[to] - PieceValue[fr]) << 16);
             }
         }
 
-    for ( p = RootMoveList; p < list; p++ )
-        if( p->move == Hash_MOVE )
+    for ( p = ROOT_MOVE_LIST; p < list; p++ )
+        if( p->move == HASH_MOVE )
             p->move |= 0xffff0000;
 
-    for ( p = list - 1; p >= RootMoveList; p-- )
+    for ( p = list - 1; p >= ROOT_MOVE_LIST; p-- )
         {
         move = p->move;
 
@@ -133,39 +135,39 @@ void MyTopAnalysis( typePos *Position )
         q->move = move;
         }
 
-    L = -ValueMate;
-    U = ValueMate;
+    L = -VALUE_MATE;
+    U = VALUE_MATE;
 
-    if( !RootMoveList[0].move )
+    if( !ROOT_MOVE_LIST[0].move )
         {
         if( IsCheck )
             {
-            RootScore = L;
+            ROOT_SCORE = L;
             }
         else
             {
-            RootScore = 0;
+            ROOT_SCORE = 0;
             }
-        RootBestMove = 0;
-        RootDepth = 0;
+        ROOT_BEST_MOVE = 0;
+        ROOT_DEPTH = 0;
         return;
         }
 
     for ( depth = 2; depth <= 250; depth += 2 )
         {
-        if( depth >= 14 && RootScore <= 25000 && -25000 <= RootScore && MultiPV == 1 )
+        if( depth >= 14 && ROOT_SCORE <= 25000 && -25000 <= ROOT_SCORE && MULTI_PV == 1 )
             {
             A = 8;
-            L = RootScore - A;
-            U = RootScore + A;
+            L = ROOT_SCORE - A;
+            U = ROOT_SCORE + A;
 
             if( L < -25000 )
-                L = -ValueMate;
+                L = -VALUE_MATE;
 
             if( U > 25000 )
-                U = ValueMate;
+                U = VALUE_MATE;
             AGAIN:
-            v = MyAnalysis(Position, L, U, depth);
+            v = MyAnalysis(POSITION, L, U, depth);
 
             if( v > L && v < U )
                 goto CHECK_DONE;
@@ -174,21 +176,21 @@ void MyTopAnalysis( typePos *Position )
                 {
                 L -= A;
                 A += A / 2;
-                RootScore = L;
+                ROOT_SCORE = L;
                 goto AGAIN;
                 }
             else
                 {
                 U += A;
                 A += A / 2;
-                RootScore = U;
+                ROOT_SCORE = U;
                 goto AGAIN;
                 }
             }
         else
-            v = MyAnalysis(Position, -ValueMate, ValueMate, depth);
+            v = MyAnalysis(POSITION, -VALUE_MATE, VALUE_MATE, depth);
         CHECK_DONE:
-        RootPrevious = RootScore;
-        CheckDone(Position, depth / 2);
+        ROOT_PREVIOUS = ROOT_SCORE;
+        CheckDone(POSITION, depth / 2);
         }
     }

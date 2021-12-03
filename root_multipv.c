@@ -1,14 +1,15 @@
 #ifndef BUILD_root_multipv
 #define BUILD_root_multipv
 #include "firebird.h"
+#include "control.h"
 
-typeRootMoveList RootMoveList[512];
-void APPLY_SORT( int AgeDepthMix, typeMPV *mpv )
+typeRootMoveList ROOT_MOVE_LIST[512];
+void APPLY_SORT( int AGE_DEPTH_MIX, typeMPV *mpv )
     {
     typeMPV *p;
     int s, x;
 
-    for ( s = 0; s < AgeDepthMix && mpv[s].move; s++ )
+    for ( s = 0; s < AGE_DEPTH_MIX && mpv[s].move; s++ )
         {
         if( s == 0 )
             continue;
@@ -31,83 +32,84 @@ void APPLY_SORT( int AgeDepthMix, typeMPV *mpv )
 #include "white.h"
 #else
 #include "black.h"
+
 #endif
 
-int MyMultiPV( typePos *Position, int depth )
+int MyMultiPV( typePOS *POSITION, int depth )
     {
-    int Cnt, cnt, best_value, move_is_check, new_depth, v;
+    int CNT, cnt, best_value, move_is_check, new_depth, v;
     typeRootMoveList *p;
-    typePosition *TempPosition = Position->Current;
+    typeDYNAMIC *POS0 = POSITION->DYN;
     uint32 move;
-    int Extend;
+    int EXTEND;
     int to;
     int i, j, x;
-    int Beta = ValueMate;
-    int Alpha = -ValueMate;
-    int GoodMoves = 0;
+    int BETA = VALUE_MATE;
+    int ALPHA = -VALUE_MATE;
+    int GOOD_MOVES = 0;
 
     for ( i = 0; i < 256; i++ )
         MPV[i].move = MPV[i].Value = 0;
 
-    if( ExtraInfo )
+    if( EXTRA_INFO )
 		{
-		if( Analysing || (depth > 8 && depth <= 70 && DesiredTime > 500000) )
+		if( ANALYSING || (depth > 8 && depth <= 70 && DESIRED_TIME > 500000) )
 			{
-			Send("info depth %d\n", depth / 2);
+			SEND("info depth %d\n", depth / 2);
 			}
 		}
-    Cnt = 0;
+    CNT = 0;
 
-    for ( p = RootMoveList; p->move; p++ )
+    for ( p = ROOT_MOVE_LIST; p->move; p++ )
         {
-        Cnt++;
+        CNT++;
         p->move &= 0x7fff;
         }
-    p = RootMoveList;
-    v = best_value = -ValueInfinity;
+    p = ROOT_MOVE_LIST;
+    v = best_value = -VALUE_INFINITY;
     cnt = 0;
 
     while( (move = p->move) )
         {
-        Make(Position, move);
+        MAKE(POSITION, move);
         EVAL(move);
-        move_is_check = (MoveIsCheck != 0);
-        Extend = 0;
-        to = To(move);
+        move_is_check = (MOVE_IS_CHECK != 0);
+        EXTEND = 0;
+        to = TO(move);
 
-        if( Pos1->cp || move_is_check || PassedPawnPush(to, FourthRank(to)) )
-            Extend = 1;
-        new_depth = depth - 2 + Extend;
+        if( POS1->cp || move_is_check || PassedPawnPush(to, FOURTH_RANK(to)) )
+            EXTEND = 1;
+        new_depth = depth - 2 + EXTEND;
 
-        if( ExtraInfo )
+        if( EXTRA_INFO )
             {
-            if( (Analysing && depth >= 24) || (depth >= 24 && (GetClock() - StartClock) > 3000000) )
+            if( (ANALYSING && depth >= 24) || (depth >= 24 && (GetClock() - START_CLOCK) > 3000000) )
 				{
-                Send("info currmove %s currmovenumber %d\n", Notate(move, String1), (p - RootMoveList) + 1);
+                SEND("info currmove %s currmovenumber %d\n", Notate(move, STRING1), (p - ROOT_MOVE_LIST) + 1);
 				}
             }
 
-        if( GoodMoves < MultiPV || depth <= 2 )
-            v = -OppPV(Position, -Beta, -Alpha, new_depth, move_is_check);
+        if( GOOD_MOVES < MULTI_PV || depth <= 2 )
+            v = -OppPV(POSITION, -BETA, -ALPHA, new_depth, move_is_check);
         else
             {
-            if( LowDepthConditionPV )
+            if( LOW_DEPTH_CONDITION_PV )
                 {
                 if( move_is_check )
-                    v = -OppLowDepthCheck(Position, -Alpha, new_depth);
+                    v = -OppLowDepthCheck(POSITION, -ALPHA, new_depth);
                 else
-                    v = -OppLowDepth(Position, -Alpha, new_depth);
+                    v = -OppLowDepth(POSITION, -ALPHA, new_depth);
                 }
             else
                 {
-                if( new_depth >= 16 && Analysing )
+                if( new_depth >= 16 && ANALYSING )
                     {
                     int an = new_depth - 12;
-                    v = ValueInfinity;
+                    v = VALUE_INFINITY;
 
-                    while( an <= new_depth && v > Alpha )
+                    while( an <= new_depth && v > ALPHA )
                         {
-                        v = -OppPV(Position, -Alpha - 1, -Alpha, an, move_is_check);
+                        v = -OppPV(POSITION, -ALPHA - 1, -ALPHA, an, move_is_check);
                         an += 4;
                         }
 
@@ -116,65 +118,65 @@ int MyMultiPV( typePos *Position, int depth )
                     }
 
                 if( move_is_check )
-                    v = -OppCutCheck(Position, -Alpha, new_depth);
+                    v = -OppCutCheck(POSITION, -ALPHA, new_depth);
                 else
-                    v = -OppCut(Position, -Alpha, new_depth);
+                    v = -OppCut(POSITION, -ALPHA, new_depth);
                 }
 
-            if( v > Alpha )
-                v = -OppPV(Position, -Alpha - 1, -Alpha, new_depth, move_is_check);
+            if( v > ALPHA )
+                v = -OppPV(POSITION, -ALPHA - 1, -ALPHA, new_depth, move_is_check);
             DEC:
-            if( v > Alpha )
-                v = -OppPV(Position, -Beta, -Alpha, new_depth, move_is_check);
+            if( v > ALPHA )
+                v = -OppPV(POSITION, -BETA, -ALPHA, new_depth, move_is_check);
 
-            if( v <= Alpha )
-                v = Alpha;
+            if( v <= ALPHA )
+                v = ALPHA;
             }
-        Undo(Position, move);
-        CheckHalt();
+        UNDO(POSITION, move);
+        CHECK_HALT();
 
-        if( v > Alpha )
+        if( v > ALPHA )
             {
             if( v > best_value )
-                HashLower(Position->Current->Hash, move, depth, v);
-            MPV[GoodMoves].move = move;
-            MPV[GoodMoves++].Value = v;
-            APPLY_SORT(GoodMoves, MPV);
+                HashLower(POSITION->DYN->HASH, move, depth, v);
+            MPV[GOOD_MOVES].move = move;
+            MPV[GOOD_MOVES++].Value = v;
+            APPLY_SORT(GOOD_MOVES, MPV);
 
-            if( GoodMoves >= MultiPV )
-                Alpha = MPV[MultiPV - 1].Value;
+            if( GOOD_MOVES >= MULTI_PV )
+                ALPHA = MPV[MULTI_PV - 1].Value;
             else
-                Alpha = MAX(MPV[0].Value - 65535, -ValueMate);
-            RootBestMove = MPV[0].move;
-            best_value = RootScore = MPV[0].Value;
-			if( (depth > 10 && depth <= 70 && DesiredTime > 500000) 
-			    || (depth > 18 && depth <= 70 && DesiredTime > 50000) 
-				|| (depth > 70 && DesiredTime > 10000000) || (Analysing && depth >= 10))
-                Information(Position, GetClock() - StartClock, -ValueMate, MPV[0].Value, ValueMate);
+                ALPHA = MAX(MPV[0].Value - MULTI_CENTI_PAWN_PV, -VALUE_MATE);
+            ROOT_BEST_MOVE = MPV[0].move;
+            best_value = ROOT_SCORE = MPV[0].Value;
+			if( (depth > 10 && depth <= 70 && DESIRED_TIME > 500000) 
+			    || (depth > 18 && depth <= 70 && DESIRED_TIME > 50000) 
+				|| (depth > 70 && DESIRED_TIME > 10000000) || (ANALYSING && depth >= 10))
+                Information(POSITION, GetClock() - START_CLOCK, -VALUE_MATE, MPV[0].Value, VALUE_MATE);
             }
         p++;
         }
 
-    for ( i = 0; i < GoodMoves; i++ )
+    for ( i = 0; i < GOOD_MOVES; i++ )
         {
-        for ( j = 0; j < Cnt; j++ )
+        for ( j = 0; j < CNT; j++ )
             {
-            if( RootMoveList[j].move == MPV[i].move )
+            if( ROOT_MOVE_LIST[j].move == MPV[i].move )
                 {
-                x = RootMoveList[i].move;
-                RootMoveList[i].move = RootMoveList[j].move;
-                RootMoveList[j].move = x;
+                x = ROOT_MOVE_LIST[i].move;
+                ROOT_MOVE_LIST[i].move = ROOT_MOVE_LIST[j].move;
+                ROOT_MOVE_LIST[j].move = x;
                 break;
                 }
             }
         }
-    RootDepth = depth;
+    ROOT_DEPTH = depth;
 
-    if( !DoSearchMoves )
+    if( !DO_SEARCH_MOVES )
         {
-        HashExact(Position, MPV[0].move, depth, MPV[0].Value, FlagExact);
+        HashExact(POSITION, MPV[0].move, depth, MPV[0].Value, FLAG_EXACT);
         }
-	if (Analysing)
-        Information(Position, GetClock() - StartClock, -ValueMate, MPV[0].Value, ValueMate);
+	if (ANALYSING)
+        Information(POSITION, GetClock() - START_CLOCK, -VALUE_MATE, MPV[0].Value, VALUE_MATE);
     return MPV[0].Value;
     }

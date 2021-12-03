@@ -152,7 +152,7 @@
     <ClCompile Include="set_position.c" />
     <ClCompile Include="SMP.c" />
     <ClCompile Include="SMP_search.c" />
-    <ClCompile Include="PST.c" />
+    <ClCompile Include="static.c" />
     <ClCompile Include="top_analysis.c" />
     <ClCompile Include="top_node.c" />
     <ClCompile Include="un_make_move.c" />
@@ -160,24 +160,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="arrays.h" />
+    <ClInclude Include="bits.h" />
     <ClInclude Include="black.h" />
-    <ClInclude Include="constants.h" />
-    <ClInclude Include="defines.h" />
-    <ClInclude Include="enums.h" />
+    <ClInclude Include="common.h" />
+    <ClInclude Include="control.h" />
+    <ClInclude Include="evaluation.h" />
     <ClInclude Include="firebird.h" />
     <ClInclude Include="functions.h" />
+    <ClInclude Include="history.h" />
     <ClInclude Include="init_gen.h" />
-    <ClInclude Include="kpk.h" />
-    <ClInclude Include="macros.h" />
-    <ClInclude Include="movelists.h" />
+    <ClInclude Include="make_unmake.h" />
+    <ClInclude Include="material_value.h" />
     <ClInclude Include="null_move.h" />
     <ClInclude Include="pawn_eval.h" />
-    <ClInclude Include="pragma.h" />
-    <ClInclude Include="rand.h" />
-    <ClInclude Include="structs.h" />
-    <ClInclude Include="typedefs.h" />
+    <ClInclude Include="tables.h" />
     <ClInclude Include="undef.h" />
-    <ClInclude Include="vars.h" />
     <ClInclude Include="white.h" />
     <ClInclude Include="win32bits.h" />
     <ClInclude Include="win64bits.h" />

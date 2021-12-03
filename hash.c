@@ -1,302 +1,284 @@
 #include "firebird.h"
+#include <string.h>
 
-#define AgeDepthMix(x,y) (((Age - (x)) & (MaxAge - 1)) * MaxDepth   + (MaxDepth - ((y) + 1)))
+#define MAX_AGE 256
+#define MAX_DEPTH 256
+
+#define AGE_DEPTH_MIX(x,y) \
+	(((AGE - (x)) & (MAX_AGE - 1)) * MAX_DEPTH   + (MAX_DEPTH - ((y) + 1)))
 
 void IncrementAge()
     {
-    Age += 1;
+    AGE += 1;
 
-    if( Age == MaxAge )
-        Age = 0;
+    if( AGE == MAX_AGE )
+        AGE = 0;
     }
 
-int InitHash( int mb )
-    {
-	int PawnHashMB;
-    Age = 0;
-    HashSize = ((1ULL << MSB(mb)) << 20) / sizeof(typeHash);
-
-    if( HashSize > 0x100000000 )
-        HashSize = 0x100000000;
-    mb = (HashSize * sizeof(typeHash)) >> 20;
-    HashMask = HashSize - 4;
-
-    if( FlagHashInit )
-        FreeAligned(HashTable);
-    FlagHashInit = true;
-    MemAlign(HashTable, 64, HashSize * sizeof(typeHash));
-    HashClear();
-
-	PawnHashMB = (((mb << 1) - 1) >> 3);
-	InitPawnHash(PawnHashMB);
-    return mb;
-    }
-
-int InitPawnHash( int mb )
-    {
-    if( mb > 1024 )
-        mb = 1024;
-    PawnHashSize = ((1 << MSB(mb)) << 20) / sizeof(typePawnEval);
-    mb = (PawnHashSize * sizeof(typePawnEval)) >> 20;
-
-    if( PawnHash )
-        FreeAligned(PawnHash);
-    MemAlign(PawnHash, 64, PawnHashSize * sizeof(typePawnEval));
-    PawnHashReset();
-    return (mb);
-    }
-
+static uint64 HASH_SIZE = 0x400000;
+static boolean FLAG_HASH_INIT = 0;
 void HashClear()
     {
 	int i;
-    memset(HashTable, 0, HashSize * sizeof(typeHash));
+    memset(HashTable, 0, HASH_SIZE * sizeof(typeHash));
     memset(PVHashTable, 0, 0x10000 * sizeof(typePVHash));
-	for (i = 0; i < HashSize; i++)
-		(HashTable + i)->age = (MaxAge / 2);
-    Age = 0;
+	for (i = 0; i < HASH_SIZE; i++)
+		(HashTable + i)->age = (MAX_AGE / 2);
+    AGE = 0;
     }
-
-void PawnHashReset()
+int InitHash( int mb )
     {
-    memset(PawnHash, 0, PawnHashSize * sizeof(typePawnEval));
+    AGE = 0;
+    HASH_SIZE = ((1ULL << MSB(mb)) << 20) / sizeof(typeHash);
+
+    if( HASH_SIZE > 0x100000000 )
+        HASH_SIZE = 0x100000000;
+    mb = (HASH_SIZE * sizeof(typeHash)) >> 20;
+    HashMask = HASH_SIZE - 4;
+
+    if( FLAG_HASH_INIT )
+        ALIGNED_FREE(HashTable);
+    FLAG_HASH_INIT = true;
+    MEMALIGN(HashTable, 64, HASH_SIZE * sizeof(typeHash));
+    HashClear();
+    return mb;
     }
-
-void HashLowerAll( typePos *Position, int move, int depth, int Value )
+void HashLowerALL( typePOS *POSITION, int move, int depth, int Value )
     {
-    int DEPTH, i, k = Position->Current->Hash & HashMask;
-    typeHash *rank;
+    int DEPTH, i, k = POSITION->DYN->HASH & HashMask;
+    typeHash *trans;
     int max = 0, w = 0;
     move &= 0x7fff;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( (rank->hash ^ (Position->Current->Hash >> 32)) == 0 && (!rank->DepthLower || IsAll(rank))
-            && rank->DepthLower <= depth )
+        if( (trans->hash ^ (POSITION->DYN->HASH >> 32)) == 0 && (!trans->DepthLower || IsALL(trans))
+            && trans->DepthLower <= depth )
             {
-            rank->DepthLower = depth;
-            rank->move = move;
-            rank->ValueUpper = Value;
-            rank->age = Age;
-            rank->flags |= FlagLower | FlagAll;
+            trans->DepthLower = depth;
+            trans->move = move;
+            trans->ValueUpper = Value;
+            trans->age = AGE;
+            trans->flags |= FLAG_LOWER | FLAG_ALL;
             return;
             }
-        DEPTH = MAX(rank->DepthLower, rank->DepthUpper);
+        DEPTH = MAX(trans->DepthLower, trans->DepthUpper);
 
-        if( AgeDepthMix(rank->age, DEPTH) > max )
+        if( AGE_DEPTH_MIX(trans->age, DEPTH) > max )
             {
-            max = AgeDepthMix(rank->age, DEPTH);
+            max = AGE_DEPTH_MIX(trans->age, DEPTH);
             w = i;
             }
         }
-    rank = HashTable + (k + w);
-    rank->hash = (Position->Current->Hash >> 32);
-    rank->DepthUpper = 0;
-    rank->ValueLower = 0;
-    rank->DepthLower = depth;
-    rank->move = move;
-    rank->ValueUpper = Value;
-    rank->age = Age;
-    rank->flags = FlagLower | FlagAll;
+    trans = HashTable + (k + w);
+    trans->hash = (POSITION->DYN->HASH >> 32);
+    trans->DepthUpper = 0;
+    trans->ValueLower = 0;
+    trans->DepthLower = depth;
+    trans->move = move;
+    trans->ValueUpper = Value;
+    trans->age = AGE;
+    trans->flags = FLAG_LOWER | FLAG_ALL;
     return;
     }
-void HashUpperCut( typePos *Position, int depth, int Value )
+void HashUpperCUT( typePOS *POSITION, int depth, int Value )
     {
-    int DEPTH, i, k = Position->Current->Hash & HashMask;
-    typeHash *rank;
+    int DEPTH, i, k = POSITION->DYN->HASH & HashMask;
+    typeHash *trans;
     int max = 0, w = 0;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( !(rank->hash ^ (Position->Current->Hash >> 32)) && (!rank->DepthUpper || IsCut(rank))
-            && rank->DepthUpper <= depth )
+        if( !(trans->hash ^ (POSITION->DYN->HASH >> 32)) && (!trans->DepthUpper || IsCUT(trans))
+            && trans->DepthUpper <= depth )
             {
-            rank->DepthUpper = depth;
-            rank->ValueLower = Value;
-            rank->age = Age;
-            rank->flags |= FlagUpper | FlagCut;
+            trans->DepthUpper = depth;
+            trans->ValueLower = Value;
+            trans->age = AGE;
+            trans->flags |= FLAG_UPPER | FLAG_CUT;
             return;
             }
-        DEPTH = MAX(rank->DepthLower, rank->DepthUpper);
+        DEPTH = MAX(trans->DepthLower, trans->DepthUpper);
 
-        if( AgeDepthMix(rank->age, DEPTH) > max )
+        if( AGE_DEPTH_MIX(trans->age, DEPTH) > max )
             {
-            max = AgeDepthMix(rank->age, DEPTH);
+            max = AGE_DEPTH_MIX(trans->age, DEPTH);
             w = i;
             }
         }
-    rank = HashTable + (k + w);
-    rank->hash = (Position->Current->Hash >> 32);
-    rank->DepthLower = 0;
-    rank->move = 0;
-    rank->ValueUpper = 0;
-    rank->DepthUpper = depth;
-    rank->ValueLower = Value;
-    rank->age = Age;
-    rank->flags = FlagUpper | FlagCut;
+    trans = HashTable + (k + w);
+    trans->hash = (POSITION->DYN->HASH >> 32);
+    trans->DepthLower = 0;
+    trans->move = 0;
+    trans->ValueUpper = 0;
+    trans->DepthUpper = depth;
+    trans->ValueLower = Value;
+    trans->age = AGE;
+    trans->flags = FLAG_UPPER | FLAG_CUT;
     return;
     }
 void HashLower( uint64 Z, int move, int depth, int Value )
     {
     int DEPTH, i, k = Z & HashMask;
-    typeHash *rank;
+    typeHash *trans;
     int max = 0, w = 0;
     move &= 0x7fff;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( !(rank->hash ^ (Z >> 32)) && !IsExact(rank) && rank->DepthLower <= depth )
+        if( !(trans->hash ^ (Z >> 32)) && !IsExact(trans) && trans->DepthLower <= depth )
             {
-            rank->DepthLower = depth;
-            rank->move = move;
-            rank->ValueUpper = Value;
-            rank->age = Age;
-            rank->flags |= FlagLower;
-            rank->flags &= ~FlagAll;
+            trans->DepthLower = depth;
+            trans->move = move;
+            trans->ValueUpper = Value;
+            trans->age = AGE;
+            trans->flags |= FLAG_LOWER;
+            trans->flags &= ~FLAG_ALL;
             return;
             }
-        DEPTH = MAX(rank->DepthLower, rank->DepthUpper);
+        DEPTH = MAX(trans->DepthLower, trans->DepthUpper);
 
-        if( AgeDepthMix(rank->age, DEPTH) > max )
+        if( AGE_DEPTH_MIX(trans->age, DEPTH) > max )
             {
-            max = AgeDepthMix(rank->age, DEPTH);
+            max = AGE_DEPTH_MIX(trans->age, DEPTH);
             w = i;
             }
         }
-    rank = HashTable + (k + w);
-    rank->hash = (Z >> 32);
-    rank->DepthUpper = 0;
-    rank->ValueLower = 0;
-    rank->DepthLower = depth;
-    rank->move = move;
-    rank->ValueUpper = Value;
-    rank->age = Age;
-    rank->flags = FlagLower;
+    trans = HashTable + (k + w);
+    trans->hash = (Z >> 32);
+    trans->DepthUpper = 0;
+    trans->ValueLower = 0;
+    trans->DepthLower = depth;
+    trans->move = move;
+    trans->ValueUpper = Value;
+    trans->age = AGE;
+    trans->flags = FLAG_LOWER;
     return;
     }
 void HashUpper( uint64 Z, int depth, int Value )
     {
     int DEPTH, i, k = Z & HashMask;
-    typeHash *rank;
+    typeHash *trans;
     int max = 0, w = 0;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( !(rank->hash ^ (Z >> 32)) && !IsExact(rank) && rank->DepthUpper <= depth )
+        if( !(trans->hash ^ (Z >> 32)) && !IsExact(trans) && trans->DepthUpper <= depth )
             {
-            rank->DepthUpper = depth;
-            rank->ValueLower = Value;
-            rank->age = Age;
-            rank->flags |= FlagUpper;
-            rank->flags &= ~FlagCut;
+            trans->DepthUpper = depth;
+            trans->ValueLower = Value;
+            trans->age = AGE;
+            trans->flags |= FLAG_UPPER;
+            trans->flags &= ~FLAG_CUT;
             return;
             }
-        DEPTH = MAX(rank->DepthLower, rank->DepthUpper);
+        DEPTH = MAX(trans->DepthLower, trans->DepthUpper);
 
-        if( AgeDepthMix(rank->age, DEPTH) > max )
+        if( AGE_DEPTH_MIX(trans->age, DEPTH) > max )
             {
-            max = AgeDepthMix(rank->age, DEPTH);
+            max = AGE_DEPTH_MIX(trans->age, DEPTH);
             w = i;
             }
         }
-    rank = HashTable + (k + w);
-    rank->hash = (Z >> 32);
-    rank->DepthLower = 0;
-    rank->move = 0;
-    rank->ValueUpper = 0;
-    rank->DepthUpper = depth;
-    rank->ValueLower = Value;
-    rank->age = Age;
-    rank->flags = FlagUpper;
+    trans = HashTable + (k + w);
+    trans->hash = (Z >> 32);
+    trans->DepthLower = 0;
+    trans->move = 0;
+    trans->ValueUpper = 0;
+    trans->DepthUpper = depth;
+    trans->ValueLower = Value;
+    trans->age = AGE;
+    trans->flags = FLAG_UPPER;
     return;
     }
-static void pv_zobrist( typePos *Position, int move, int depth, int Value )
+static void pv_zobrist( typePOS *POSITION, int move, int depth, int Value )
     {
-    int i, k = Position->Current->Hash & PVHashMask;
-    typePVHash *rank;
+    int i, k = POSITION->DYN->HASH & PVHashMask;
+    typePVHash *trans;
     int w = 0, max = 0;
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = PVHashTable + (k + i);
+        trans = PVHashTable + (k + i);
 
-        if( rank->hash == Position->Current->Hash )
+        if( trans->hash == POSITION->DYN->HASH )
             {
-            rank->depth = depth;
-            rank->Value = Value;
-            rank->move = move;
-            rank->age = Age;
+            trans->depth = depth;
+            trans->Value = Value;
+            trans->move = move;
+            trans->age = AGE;
             return;
             }
 
-        if( AgeDepthMix(rank->age, rank->depth) > max )
+        if( AGE_DEPTH_MIX(trans->age, trans->depth) > max )
             {
-            max = AgeDepthMix(rank->age, rank->depth);
+            max = AGE_DEPTH_MIX(trans->age, trans->depth);
             w = i;
             }
         }
-    rank = PVHashTable + (k + w);
-    rank->hash = Position->Current->Hash;
-    rank->depth = depth;
-    rank->move = move;
-    rank->Value = Value;
-    rank->age = Age;
+    trans = PVHashTable + (k + w);
+    trans->hash = POSITION->DYN->HASH;
+    trans->depth = depth;
+    trans->move = move;
+    trans->Value = Value;
+    trans->age = AGE;
     }
 
-void HashExact( typePos *Position, int move, int depth, int Value, int Flags )
+void HashExact( typePOS *POSITION, int move, int depth, int Value, int FLAGS )
     {
-    int DEPTH, i, j, k = Position->Current->Hash & HashMask;
-    typeHash *rank;
+    int DEPTH, i, j, k = POSITION->DYN->HASH & HashMask;
+    typeHash *trans;
     int max = 0, w = 0;
     move &= 0x7fff;
-    pv_zobrist(Position, move, depth, Value);
+    pv_zobrist(POSITION, move, depth, Value);
 
     for ( i = 0; i < 4; i++ )
         {
-        rank = HashTable + (k + i);
+        trans = HashTable + (k + i);
 
-        if( (rank->hash ^ (Position->Current->Hash >> 32)) == 0 && MAX(rank->DepthUpper, rank->DepthLower) <= depth )
+        if( (trans->hash ^ (POSITION->DYN->HASH >> 32)) == 0 && MAX(trans->DepthUpper, trans->DepthLower) <= depth )
             {
-            rank->DepthUpper = rank->DepthLower = depth;
-            rank->move = move;
-            rank->ValueLower = rank->ValueUpper = Value;
-            rank->age = Age;
-            rank->flags = Flags;
+            trans->DepthUpper = trans->DepthLower = depth;
+            trans->move = move;
+            trans->ValueLower = trans->ValueUpper = Value;
+            trans->age = AGE;
+            trans->flags = FLAGS;
 
             for ( j = i + 1; j < 4; j++ )
                 {
-                rank = HashTable + (k + j);
+                trans = HashTable + (k + j);
 
-                if( (rank->hash ^ (Position->Current->Hash >> 32)) == 0
-                    && MAX(rank->DepthUpper, rank->DepthLower) <= depth )
+                if( (trans->hash ^ (POSITION->DYN->HASH >> 32)) == 0
+                    && MAX(trans->DepthUpper, trans->DepthLower) <= depth )
                     {
-                    memset(rank, 0, 16);
-                    rank->age = Age ^ (MaxAge / 2);
+                    memset(trans, 0, 16);
+                    trans->age = AGE ^ (MAX_AGE / 2);
                     }
                 }
             return;
             }
-        DEPTH = MAX(rank->DepthLower, rank->DepthUpper);
+        DEPTH = MAX(trans->DepthLower, trans->DepthUpper);
 
-        if( AgeDepthMix(rank->age, DEPTH) > max )
+        if( AGE_DEPTH_MIX(trans->age, DEPTH) > max )
             {
-            max = AgeDepthMix(rank->age, DEPTH);
+            max = AGE_DEPTH_MIX(trans->age, DEPTH);
             w = i;
             }
         }
-    rank = HashTable + (k + w);
-    rank->hash = (Position->Current->Hash >> 32);
-    rank->DepthUpper = rank->DepthLower = depth;
-    rank->move = move;
-    rank->ValueLower = rank->ValueUpper = Value;
-    rank->age = Age;
-    rank->flags = Flags;
+    trans = HashTable + (k + w);
+    trans->hash = (POSITION->DYN->HASH >> 32);
+    trans->DepthUpper = trans->DepthLower = depth;
+    trans->move = move;
+    trans->ValueLower = trans->ValueUpper = Value;
+    trans->age = AGE;
+    trans->flags = FLAGS;
     return;
     }

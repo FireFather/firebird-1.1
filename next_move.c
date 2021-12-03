@@ -7,27 +7,27 @@
 #include "black.h"
 #endif
 
-uint32 MyNext( typePos *Position, typeNext *NextMove )
+uint32 MyNext( typePOS *POSITION, typeNEXT *NextMove )
     {
     typeMoveList *p, *q, *list;
-    uint32 move, Temp;
+    uint32 move, TEMP;
 
     switch( NextMove->phase )
         {
-        case Trans:
-            NextMove->phase = CaptureGen;
-            if( NextMove->trans_move && MyOK(Position, NextMove->trans_move) )
+        case TRANS:
+            NextMove->phase = CAPTURE_GEN;
+            if( NextMove->trans_move && MyOK(POSITION, NextMove->trans_move) )
                 return(NextMove->trans_move);
 
-        case CaptureGen:
-            NextMove->phase = Capture_Moves;
+        case CAPTURE_GEN:
+            NextMove->phase = CAPTURE_MOVES;
             NextMove->move = 0;
-            MyCapture(Position, NextMove->List, OppOccupied);
+            MyCapture(POSITION, NextMove->LIST, OppOccupied);
 
-        case Capture_Moves:
+        case CAPTURE_MOVES:
             while( 1 )
                 {
-                p = NextMove->List + NextMove->move;
+                p = NextMove->LIST + NextMove->move;
                 move = p->move;
 
                 if( !move )
@@ -39,9 +39,9 @@ uint32 MyNext( typePos *Position, typeNext *NextMove )
                     {
                     if( move < q->move )
                         {
-                        Temp = q->move;
+                        TEMP = q->move;
                         q->move = move;
-                        move = Temp;
+                        move = TEMP;
                         }
                     q++;
                     }
@@ -49,57 +49,57 @@ uint32 MyNext( typePos *Position, typeNext *NextMove )
                 if( (move & 0x7fff) == NextMove->trans_move )
                     continue;
 
-                if( !EasySEE(move) && !MySEE(Position, move) )
-                    NextMove->BadCaps[NextMove->bc++] = move;
+                if( !EasySEE(move) && !MySEE(POSITION, move) )
+                    NextMove->BAD_CAPS[NextMove->bc++] = move;
                 else
                     break;
                 }
             if( move )
                 return(move);
-            NextMove->phase = Killer1;
-            move = Position->Current->killer1;
-            if( move && move != NextMove->trans_move && Position->sq[To(move)] == 0 && MyOK(Position, move) )
+            NextMove->phase = KILLER1;
+            move = POSITION->DYN->killer1;
+            if( move && move != NextMove->trans_move && POSITION->sq[TO(move)] == 0 && MyOK(POSITION, move) )
                 return(move);
 
-        case Killer1:
-            NextMove->phase = Killer2;
-            move = Position->Current->killer2;
-            if( move && move != NextMove->trans_move && Position->sq[To(move)] == 0 && MyOK(Position, move) )
+        case KILLER1:
+            NextMove->phase = KILLER2;
+            move = POSITION->DYN->killer2;
+            if( move && move != NextMove->trans_move && POSITION->sq[TO(move)] == 0 && MyOK(POSITION, move) )
                 return(move);
 
-        case Killer2:
-            NextMove->phase = Ordinary_Moves;
+        case KILLER2:
+            NextMove->phase = ORDINARY_MOVES;
             NextMove->move = 0;
-            list = MyOrdinary(Position, NextMove->List);
-            SortOrdinary(NextMove->List, list, NextMove->trans_move, Position->Current->killer1, Position->Current->killer2);
+            list = MyOrdinary(POSITION, NextMove->LIST);
+            SortOrdinary(NextMove->LIST, list, NextMove->trans_move, POSITION->DYN->killer1, POSITION->DYN->killer2);
 
-        case Ordinary_Moves:
-            move = (NextMove->List + NextMove->move)->move;
+        case ORDINARY_MOVES:
+            move = (NextMove->LIST + NextMove->move)->move;
             NextMove->move++;
             if( move )
                 return(move);
-            NextMove->phase = BadCaps;
-            NextMove->BadCaps[NextMove->bc] = 0;
+            NextMove->phase = BAD_CAPS;
+            NextMove->BAD_CAPS[NextMove->bc] = 0;
             NextMove->move = 0;
 
-        case BadCaps:
-            move = NextMove->BadCaps[NextMove->move++];
+        case BAD_CAPS:
+            move = NextMove->BAD_CAPS[NextMove->move++];
             return(move);
 
-        case Trans2:
-            NextMove->phase = CaptureGen2;
-            if( NextMove->trans_move && MyOK(Position, NextMove->trans_move) )
+        case TRANS2:
+            NextMove->phase = CAPTURE_PGEN2;
+            if( NextMove->trans_move && MyOK(POSITION, NextMove->trans_move) )
                 return(NextMove->trans_move);
 
-        case CaptureGen2:
-            NextMove->phase = CaptureMoves2;
+        case CAPTURE_PGEN2:
+            NextMove->phase = CAPTURE_MOVES2;
             NextMove->move = 0;
-            MyCapture(Position, NextMove->List, NextMove->TARGET);
+            MyCapture(POSITION, NextMove->LIST, NextMove->TARGET);
 
-        case CaptureMoves2:
+        case CAPTURE_MOVES2:
             while( 1 )
                 {
-                p = NextMove->List + NextMove->move;
+                p = NextMove->LIST + NextMove->move;
                 move = p->move;
 
                 if( !move )
@@ -111,62 +111,9 @@ uint32 MyNext( typePos *Position, typeNext *NextMove )
                     {
                     if( move < q->move )
                         {
-                        Temp = q->move;
+                        TEMP = q->move;
                         q->move = move;
-                        move = Temp;
-                        }
-                    q++;
-                    }
-
-                if( (move & 0x7fff) == NextMove->trans_move )
-                    continue;
-                else
-                    break;
-                }
-            if( move )
-                return(move);
-            NextMove->move = 0;
-            NextMove->phase = QuietChecks;
-            MyQuietChecks(Position, NextMove->List, NextMove->TARGET);
-
-        case QuietChecks:
-            move = (NextMove->List + NextMove->move)->move;
-            NextMove->move++;
-            return(move);
-
-        case Evade_Phase:
-            move = (NextMove->List + NextMove->move)->move;
-            NextMove->move++;
-            return(move);
-
-        case Trans3:
-            NextMove->phase = CaptureGen3;
-            if( NextMove->trans_move && MyOK(Position, NextMove->trans_move) )
-                return(NextMove->trans_move);
-
-        case CaptureGen3:
-            NextMove->phase = CaptureMoves3;
-            NextMove->move = 0;
-            MyCapture(Position, NextMove->List, OppOccupied);
-
-        case CaptureMoves3:
-            while( 1 )
-                {
-                p = NextMove->List + NextMove->move;
-                move = p->move;
-
-                if( !move )
-                    break;
-                q = p + 1;
-                NextMove->move++;
-
-                while( q->move )
-                    {
-                    if( move < q->move )
-                        {
-                        Temp = q->move;
-                        q->move = move;
-                        move = Temp;
+                        move = TEMP;
                         }
                     q++;
                     }
@@ -179,24 +126,77 @@ uint32 MyNext( typePos *Position, typeNext *NextMove )
             if( move )
                 return(move);
             NextMove->move = 0;
-            NextMove->phase = QuietChecks3;
-            MyQuietChecks(Position, NextMove->List, OppOccupied);
+            NextMove->phase = QUIET_CHECKS;
+            MyQuietChecks(POSITION, NextMove->LIST, NextMove->TARGET);
 
-        case QuietChecks3:
-            move = (NextMove->List + NextMove->move)->move;
+        case QUIET_CHECKS:
+            move = (NextMove->LIST + NextMove->move)->move;
+            NextMove->move++;
+            return(move);
+
+        case EVADE_PHASE:
+            move = (NextMove->LIST + NextMove->move)->move;
+            NextMove->move++;
+            return(move);
+
+        case TRANS3:
+            NextMove->phase = CAPTURE_GEN3;
+            if( NextMove->trans_move && MyOK(POSITION, NextMove->trans_move) )
+                return(NextMove->trans_move);
+
+        case CAPTURE_GEN3:
+            NextMove->phase = CAPTURE_MOVES3;
+            NextMove->move = 0;
+            MyCapture(POSITION, NextMove->LIST, OppOccupied);
+
+        case CAPTURE_MOVES3:
+            while( 1 )
+                {
+                p = NextMove->LIST + NextMove->move;
+                move = p->move;
+
+                if( !move )
+                    break;
+                q = p + 1;
+                NextMove->move++;
+
+                while( q->move )
+                    {
+                    if( move < q->move )
+                        {
+                        TEMP = q->move;
+                        q->move = move;
+                        move = TEMP;
+                        }
+                    q++;
+                    }
+
+                if( (move & 0x7fff) == NextMove->trans_move )
+                    continue;
+                else
+                    break;
+                }
+            if( move )
+                return(move);
+            NextMove->move = 0;
+            NextMove->phase = QUIET_CHECKS3;
+            MyQuietChecks(POSITION, NextMove->LIST, OppOccupied);
+
+        case QUIET_CHECKS3:
+            move = (NextMove->LIST + NextMove->move)->move;
             NextMove->move++;
             if( move )
                 return(move);
             NextMove->move = 0;
-            NextMove->phase = PositionalGainPhase;
-            MyPositionalGain(Position, NextMove->List, NextMove->mask);
+            NextMove->phase = POSITIONAL_GAIN_PHASE;
+            MyPositionalGain(POSITION, NextMove->LIST, NextMove->mask);
 
-        case PositionalGainPhase:
-            move = (NextMove->List + NextMove->move)->move;
+        case POSITIONAL_GAIN_PHASE:
+            move = (NextMove->LIST + NextMove->move)->move;
             NextMove->move++;
             return(move);
 
-        case Fase0:
+        case FASE_0:
             return(0);
         }
     return 0;
