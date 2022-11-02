@@ -11,6 +11,5 @@ includes Visual Studio 2019 project files
 About +50 Elo strnger than Robbolito 0.085g3 at ultra-fast TC
 
 - Settings = Gauntlet/32MB/1000ms+100ms/M 500cp for 6 moves, D 120 moves/EPD:book.epd(31526)
-- Time = 18508 sec elapsed, 8339 sec remaining
-- 1.  FireBird 1.1             	6406.0/11295	3731-2214-5350
-- 2.  Robbolito 0.085g3        	4889.0/11295	2214-3731-5350
+- 1  FireBird 1.1             	6406.0/11295	3731-2214-5350
+- 2  Robbolito 0.085g3        	4889.0/11295	2214-3731-5350
